@@ -1,0 +1,15 @@
+# 🌌 InstaGlide Render Blueprint Specification
+# Connecting this repository to Render (https://render.com) will automatically provision and deploy the full-stack service.
+
+services:
+  - type: web
+    name: instaglide
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: NODE_ENV
+        value: production

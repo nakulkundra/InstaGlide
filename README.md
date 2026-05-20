@@ -59,6 +59,13 @@ The server will boot up and report active listeners:
 
 Open your browser and navigate to **`http://localhost:3000`** to experience the dashboard.
 
+### 🌐 Cloud Deployment (Render)
+InstaGlide includes a fully-configured `render.yaml` blueprint for instant cloud deployment:
+1. Create a free account on **[Render](https://render.com/)**.
+2. Click **New +** -> **Blueprint**.
+3. Connect your GitHub repository `InstaGlide`.
+4. Render will automatically read `render.yaml` and deploy your Node.js application! Every future commit pushed to your GitHub `main` branch will trigger an automated build and deploy.
+
 ---
 
 ## 📂 Project Structure
