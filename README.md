@@ -66,6 +66,13 @@ InstaGlide includes a fully-configured `render.yaml` blueprint for instant cloud
 3. Connect your GitHub repository `InstaGlide`.
 4. Render will automatically read `render.yaml` and deploy your Node.js application! Every future commit pushed to your GitHub `main` branch will trigger an automated build and deploy.
 
+### ⚡ Serverless Deployment (Vercel)
+InstaGlide is fully optimized for **Vercel Serverless Functions** with an embedded `vercel.json` config:
+1. Sign up for a free account on **[Vercel](https://vercel.com/)**.
+2. Click **Add New** -> **Project**.
+3. Import your GitHub repository `InstaGlide`.
+4. Click **Deploy**! Vercel will automatically configure the routes and deploy your application as an ultra-fast serverless app.
+
 ---
 
 ## 📂 Project Structure
