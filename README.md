@@ -1,6 +1,6 @@
-# 🌌 Antigravity Instagram Downloader
+# 🌌 InstaGlide
 
-A premium, aerospace-grade Instagram Media Downloader and Creator Profile Explorer. Featuring a design inspired by **Google Gemini** and **Antigravity**'s futuristic precision, this app provides seamless high-performance extraction of single posts, videos, reels, and entire carousel slides, alongside profile exploration and intelligent batch downloading.
+A premium, aerospace-grade Instagram Media Downloader and Creator Profile Explorer. Featuring a design inspired by **Google Gemini** and **Antigravity**'s futuristic precision, **InstaGlide** provides seamless high-performance extraction of single posts, videos, reels, and entire carousel slides, alongside profile exploration and intelligent batch downloading.
 
 ---
 
@@ -64,7 +64,7 @@ Open your browser and navigate to **`http://localhost:3000`** to experience the 
 ## 📂 Project Structure
 
 ```
-instagram-downloader/
+instaglide/
 ├── public/                 # Client assets
 │   ├── index.html          # Main HTML structure
 │   ├── style.css           # Gemini × Antigravity custom stylesheet

@@ -1,7 +1,7 @@
 {
-  "name": "instagram-downloader",
+  "name": "instaglide",
   "version": "1.0.0",
-  "description": "Premium Instagram Single & Profile Media Downloader",
+  "description": "InstaGlide - Premium Instagram Single & Profile Media Downloader",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
