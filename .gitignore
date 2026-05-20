@@ -1,0 +1,43 @@
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Scraper / API test data dumps
+profile.json
+get_docid.json
+post_page.html
+embed.html
+urls.txt
+*.json.bak
+*.html.bak
+
+# Test / Debug utility scripts
+check-html.js
+check-username.js
+filter-urls.js
+find-media.js
+list-urls.js
+parse-docid-res.js
+parse-embed.js
+parse-post-page.js
+print-docid-res.js
+search-file.js
+test-*.js
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS metadata
+.DS_Store
+Thumbs.db

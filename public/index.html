@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>InstaGlide — Gemini-Powered Instagram Media Downloader</title>
+  <meta name="description" content="State-of-the-art Instagram video, reel, and profile media downloader with Google Gemini aesthetics and Antigravity precision.">
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Noto+Sans+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Lucide Icons (CDN) -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Ambient background glow elements -->
+  <div class="ambient-glow glow-1"></div>
+  <div class="ambient-glow glow-2"></div>
+  <div class="ambient-glow glow-3"></div>
+
+  <div class="app-container">
+    
+    <!-- Premium Header -->
+    <header class="main-header">
+      <div class="logo">
+        <i data-lucide="instagram" class="logo-icon"></i>
+        <h1>Insta<span>Glide</span></h1>
+      </div>
+      <p class="subtitle">State-of-the-art media extraction & profile downloader</p>
+    </header>
+
+    <!-- Tab Navigation Slider -->
+    <div class="tab-container">
+      <button class="tab-btn active" data-tab="single">
+        <i data-lucide="video" class="tab-icon"></i>
+        Single Downloader
+      </button>
+      <button class="tab-btn" data-tab="profile">
+        <i data-lucide="users" class="tab-icon"></i>
+        Profile Explorer
+      </button>
+    </div>
+
+    <!-- MAIN INTERACTIVE CONTAINER -->
+    <main class="main-card glass-panel">
+      
+      <!-- ================= SINGLE DOWNLOADER TAB ================= -->
+      <section id="tab-single" class="tab-content active">
+        <div class="input-group">
+          <label for="single-url">Enter Instagram Video, Reel, or Post URL</label>
+          <div class="input-wrapper">
+            <i data-lucide="link" class="input-icon"></i>
+            <input type="text" id="single-url" placeholder="https://www.instagram.com/reel/C3b5WdJuxxx/" autocomplete="off">
+            <button class="clear-btn" id="single-clear" style="display: none;">
+              <i data-lucide="x"></i>
+            </button>
+          </div>
+          <button class="primary-btn" id="single-submit">
+            <span>Fetch Media</span>
+            <i data-lucide="arrow-right"></i>
+          </button>
+        </div>
+
+        <!-- Dynamic Loader for Single Download -->
+        <div class="loader-container" id="single-loader" style="display: none;">
+          <div class="spinner"></div>
+          <p class="loader-text">Analyzing Instagram CDN metadata...</p>
+        </div>
+
+        <!-- Single Download Result Card -->
+        <div class="result-container" id="single-result" style="display: none;">
+          <div class="result-grid">
+            <!-- Media Preview Section -->
+            <div class="media-preview-box">
+              <div class="preview-ratio-container" id="single-preview-content">
+                <!-- Injected via JavaScript (Video Player or Image) -->
+              </div>
+            </div>
+            
+            <!-- Metadata & Download Actions -->
+            <div class="meta-details-box">
+              <div class="creator-profile">
+                <img id="single-avatar" src="" alt="Avatar" class="avatar-img">
+                <div class="creator-info">
+                  <h3 id="single-author">@creator</h3>
+                  <span class="badge badge-verified"><i data-lucide="check-circle-2"></i> Public Post</span>
+                </div>
+              </div>
+
+              <div class="caption-scroll">
+                <p id="single-caption" class="caption-text">Beautiful summer day in the mountains! #nature #travel</p>
+              </div>
+
+              <div class="action-box">
+                <a href="#" id="single-download-btn" class="download-trigger-btn">
+                  <i data-lucide="download-cloud"></i>
+                  <span>Download File</span>
+                </a>
+                <p class="security-note"><i data-lucide="shield-check"></i> Clean, direct CORS-proxied download</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= PROFILE EXPLORER TAB ================= -->
+      <section id="tab-profile" class="tab-content">
+        <div class="input-group">
+          <label for="profile-handle">Enter Instagram Username / Handle</label>
+          <div class="input-wrapper">
+            <i data-lucide="at-sign" class="input-icon"></i>
+            <input type="text" id="profile-handle" placeholder="username (e.g., instagram)" autocomplete="off">
+            <button class="clear-btn" id="profile-clear" style="display: none;">
+              <i data-lucide="x"></i>
+            </button>
+          </div>
+          <button class="primary-btn" id="profile-submit">
+            <span>Explore Channel</span>
+            <i data-lucide="search"></i>
+          </button>
+        </div>
+
+        <!-- Dynamic Loader for Profile -->
+        <div class="loader-container" id="profile-loader" style="display: none;">
+          <div class="spinner"></div>
+          <p class="loader-text">Connecting to public profile mirror...</p>
+        </div>
+
+        <!-- Profile Results Panel -->
+        <div class="profile-result-container" id="profile-result" style="display: none;">
+          
+          <!-- Translucent Profile Header Summary -->
+          <div class="profile-meta-header glass-card">
+            <img id="profile-avatar" src="" alt="Profile Avatar" class="profile-header-avatar">
+            <div class="profile-header-text">
+              <div class="profile-title-row">
+                <h2 id="profile-name">Creator Name</h2>
+                <span class="handle-badge" id="profile-badge-handle">@username</span>
+              </div>
+              <p id="profile-bio" class="profile-header-bio">Exploring the world and capturing cinematic stories.</p>
+            </div>
+          </div>
+
+          <!-- Multi-Select Action Bar -->
+          <div class="media-action-bar">
+            <div class="selector-controls">
+              <label class="custom-checkbox-container">
+                <input type="checkbox" id="select-all-posts">
+                <span class="checkmark"></span>
+                <span class="checkbox-label">Select All</span>
+              </label>
+              <button class="deselect-btn" id="deselect-all-btn" style="display: none;">
+                <i data-lucide="x-circle"></i>
+                <span>Deselect All</span>
+              </button>
+              <span class="selection-count" id="selection-status">0 items selected</span>
+            </div>
+            
+            <div class="action-buttons-group">
+              <button class="download-all-btn" id="download-all-trigger">
+                <i data-lucide="download-cloud"></i>
+                <span>Download All</span>
+              </button>
+              <button class="batch-download-btn disabled" id="batch-download-trigger">
+                <i data-lucide="download"></i>
+                <span>Download Selected</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Responsive Media Grid -->
+          <div class="media-grid" id="profile-media-grid">
+            <!-- Grid items injected dynamically via JS -->
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Global Error / Alert Panel -->
+      <div class="error-panel" id="global-error" style="display: none;">
+        <i data-lucide="alert-triangle" class="error-icon"></i>
+        <div class="error-text-box">
+          <h4>Extraction Failed</h4>
+          <p id="error-message">Unable to fetch Instagram media metadata. The post might be private or deleted.</p>
+        </div>
+        <button class="error-close-btn" onclick="document.getElementById('global-error').style.display = 'none';">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+    </main>
+
+    <!-- History Panel -->
+    <section class="history-section">
+      <div class="history-title">
+        <i data-lucide="history"></i>
+        <h2>Recent Downloader Activity</h2>
+      </div>
+      <div class="history-list" id="activity-history-list">
+        <div class="history-empty-state">
+          <i data-lucide="folder-open"></i>
+          <p>No recent downloads. Your physical file saves will appear here.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Translucent Slide-out Sequential Download Queue Panel -->
+    <div class="queue-panel glass-panel" id="queue-overlay" style="display: none;">
+      <div class="queue-header">
+        <div class="queue-title">
+          <div class="spinner spinner-small"></div>
+          <h3>Downloading Batch Queue</h3>
+        </div>
+        <button class="queue-minimize-btn" id="queue-close-btn">
+          <i data-lucide="minus"></i>
+        </button>
+      </div>
+      
+      <div class="queue-body">
+        <div class="queue-progress-status">
+          <span id="queue-status-text">Processing item 1 of 5...</span>
+          <span id="queue-percentage">20%</span>
+        </div>
+        <div class="queue-progress-container">
+          <div class="queue-progress-bar" id="queue-progress-bar" style="width: 20%;"></div>
+        </div>
+        <p class="queue-file-label" id="queue-file-label">media_C3b5WdJuxxx.mp4</p>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <p>&copy; 2026 InstaGlide. For personal and educational use only.</p>
+      <p class="disclaimer">Not affiliated with Instagram or Meta Platforms, Inc.</p>
+    </footer>
+
+  </div>
+
+  <!-- JS Logic -->
+  <script src="app.js"></script>
+  <script>
+    // Initialize Lucide Icons immediately after DOM loads
+    document.addEventListener("DOMContentLoaded", function() {
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>
