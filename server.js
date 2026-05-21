@@ -78,6 +78,34 @@ async function bootstrapYtDlp() {
   }
 }
 
+function convertJsonToNetscape(jsonStr) {
+  try {
+    const cookies = JSON.parse(jsonStr);
+    if (!Array.isArray(cookies)) {
+      return jsonStr; // Return as-is if not an array of cookies
+    }
+    
+    let netscapeStr = '# Netscape HTTP Cookie File\n# This file was generated automatically by InstaGlide\n\n';
+    
+    for (const cookie of cookies) {
+      const domain = cookie.domain || '';
+      const flag = domain.startsWith('.') ? 'TRUE' : 'FALSE';
+      const path = cookie.path || '/';
+      const secure = cookie.secure ? 'TRUE' : 'FALSE';
+      const expiration = cookie.expirationDate ? Math.round(cookie.expirationDate) : 0;
+      const name = cookie.name || '';
+      const value = cookie.value || '';
+      
+      netscapeStr += `${domain}\t${flag}\t${path}\t${secure}\t${expiration}\t${name}\t${value}\n`;
+    }
+    
+    return netscapeStr;
+  } catch (err) {
+    console.error('[API/YT] Error converting JSON cookies to Netscape format:', err.message);
+    return jsonStr; // Fallback to raw string if parsing fails
+  }
+}
+
 // Helper to get yt-dlp options with auto-detected cookies.txt to bypass YouTube bot detection
 function getYoutubeDlOptions(extraParams = {}) {
   const options = {
@@ -89,30 +117,55 @@ function getYoutubeDlOptions(extraParams = {}) {
 
   let cookiesPath = path.resolve(__dirname, 'cookies.txt');
   const renderSecretsPath = '/etc/secrets/cookies.txt';
-  const envCookies = process.env.YOUTUBE_COOKIES || process.env.YT_COOKIES || process.env.COOKIES_CONTENT;
+  let rawCookies = '';
+  let sourceLabel = '';
 
+  // 1. Read from Render Secrets first
   if (fs.existsSync(renderSecretsPath)) {
-    cookiesPath = renderSecretsPath;
-    const stats = fs.statSync(cookiesPath);
-    console.log(`[API/YT] Auto-detected cookies.txt at Render Secrets path: ${cookiesPath} (Size: ${stats.size} bytes). Attaching to yt-dlp.`);
-    options.cookies = cookiesPath;
-  } else if (fs.existsSync(cookiesPath)) {
-    const stats = fs.statSync(cookiesPath);
-    console.log(`[API/YT] Auto-detected cookies.txt at local path: ${cookiesPath} (Size: ${stats.size} bytes). Attaching to yt-dlp.`);
-    options.cookies = cookiesPath;
-  } else if (envCookies) {
-    // Fallback: Check if cookies are supplied as a raw environment variable string (Netscape or JSON format)
-    const tempCookiesPath = path.join('/tmp', 'env_cookies.txt');
     try {
-      fs.writeFileSync(tempCookiesPath, envCookies.trim());
+      rawCookies = fs.readFileSync(renderSecretsPath, 'utf8');
+      sourceLabel = `Render Secrets path: ${renderSecretsPath}`;
+    } catch (readErr) {
+      console.error(`[API/YT] Failed to read Render secrets cookies file: ${readErr.message}`);
+    }
+  } 
+  // 2. Read from local path
+  else if (fs.existsSync(cookiesPath)) {
+    try {
+      rawCookies = fs.readFileSync(cookiesPath, 'utf8');
+      sourceLabel = `local path: ${cookiesPath}`;
+    } catch (readErr) {
+      console.error(`[API/YT] Failed to read local cookies file: ${readErr.message}`);
+    }
+  }
+  // 3. Read from Environment variable
+  else {
+    rawCookies = process.env.YOUTUBE_COOKIES || process.env.YT_COOKIES || process.env.COOKIES_CONTENT || '';
+    if (rawCookies) {
+      sourceLabel = 'environment variable';
+    }
+  }
+
+  if (rawCookies.trim()) {
+    let finalCookiesContent = rawCookies.trim();
+    
+    // Check if the content is in JSON format and convert if necessary
+    if (finalCookiesContent.startsWith('[') || finalCookiesContent.startsWith('{')) {
+      console.log(`[API/YT] Cookies from ${sourceLabel} are in JSON format. Automatically converting to Netscape format...`);
+      finalCookiesContent = convertJsonToNetscape(finalCookiesContent);
+    }
+
+    const tempCookiesPath = path.join('/tmp', 'resolved_cookies.txt');
+    try {
+      fs.writeFileSync(tempCookiesPath, finalCookiesContent);
       const stats = fs.statSync(tempCookiesPath);
-      console.log(`[API/YT] Auto-detected cookies in environment variable. Wrote to temp path: ${tempCookiesPath} (Size: ${stats.size} bytes). Attaching to yt-dlp.`);
+      console.log(`[API/YT] Successfully resolved and configured cookies file from ${sourceLabel} at: ${tempCookiesPath} (Size: ${stats.size} bytes). Attaching to yt-dlp.`);
       options.cookies = tempCookiesPath;
     } catch (writeErr) {
-      console.error(`[API/YT] Failed to write environment cookies to temp file: ${writeErr.message}`);
+      console.error(`[API/YT] Failed to write resolved cookies to temp file: ${writeErr.message}`);
     }
   } else {
-    console.warn(`[API/YT] WARNING: cookies.txt NOT found at both Render Secrets path (${renderSecretsPath}) and local path (${cookiesPath})! No fallback environment cookies detected.`);
+    console.warn(`[API/YT] WARNING: No cookies found! yt-dlp will run without cookies.`);
     if (process.env.NODE_ENV !== 'production') {
       console.log(`[API/YT] Local development active. Trying to read cookies from local Chrome...`);
       options.cookiesFromBrowser = 'chrome';
