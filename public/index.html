@@ -46,6 +46,10 @@
         <i data-lucide="music" class="tab-icon"></i>
         YT Music Suite
       </button>
+      <button class="tab-btn" data-tab="spotify">
+        <i data-lucide="disc" class="tab-icon"></i>
+        Spotify Hub
+      </button>
     </div>
 
     <!-- MAIN INTERACTIVE CONTAINER -->
@@ -299,6 +303,146 @@
 
             <!-- Responsive Track checklist list -->
             <div class="yt-track-list" id="yt-playlist-track-list">
+              <!-- Playlist track items injected dynamically via JS -->
+            </div>
+
+          </div>
+ 
+        </div>
+      </section>
+
+      <!-- ================= SPOTIFY DOWNLOADER TAB ================= -->
+      <section id="tab-spotify" class="tab-content">
+        <div class="input-group">
+          <label for="spotify-url">Enter Spotify Track, Album, or Playlist URL</label>
+          <div class="input-wrapper">
+            <i data-lucide="disc" class="input-icon"></i>
+            <input type="text" id="spotify-url" placeholder="https://open.spotify.com/track/... or playlist/..." autocomplete="off">
+            <button class="clear-btn" id="spotify-clear" style="display: none;">
+              <i data-lucide="x"></i>
+            </button>
+          </div>
+          <div class="spotify-btn-row">
+            <button class="primary-btn" id="spotify-submit">
+              <span>Inspect Spotify Link</span>
+              <i data-lucide="search"></i>
+            </button>
+            <button class="settings-toggle-btn" id="spotify-settings-toggle" title="Spotify API Credentials Settings">
+              <i data-lucide="settings"></i>
+              <span>Configure Credentials</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Spotify API Credentials settings panel -->
+        <div class="spotify-credentials-card glass-card" id="spotify-settings-panel" style="display: none;">
+          <div class="settings-header">
+            <i data-lucide="key" class="settings-title-icon"></i>
+            <h3>Spotify Developer API Credentials</h3>
+          </div>
+          <div class="settings-body">
+            <p class="settings-desc">Spotify requires a free <strong>Client ID</strong> and <strong>Client Secret</strong> to fetch <strong>Playlists</strong> or <strong>Albums</strong> due to rate-limiting and anonymous browser scraping restrictions. Single tracks do <strong>NOT</strong> require credentials.</p>
+            
+            <div class="credentials-inputs-group">
+              <div class="cred-input-wrapper">
+                <label for="spotify-client-id">Spotify Client ID</label>
+                <input type="password" id="spotify-client-id" placeholder="Enter your Spotify Client ID" autocomplete="off">
+              </div>
+              <div class="cred-input-wrapper">
+                <label for="spotify-client-secret">Spotify Client Secret</label>
+                <input type="password" id="spotify-client-secret" placeholder="Enter your Spotify Client Secret" autocomplete="off">
+              </div>
+            </div>
+
+            <div class="tutorial-tip">
+              <i data-lucide="help-circle"></i>
+              <span>Need keys? Go to the <a href="https://developer.spotify.com/dashboard" target="_blank">Spotify Developer Dashboard</a>, create an app, and copy your Client ID & Secret! They will be saved securely in your browser's localStorage.</span>
+            </div>
+          </div>
+          <div class="settings-actions">
+            <button class="primary-btn save-cred-btn" id="spotify-save-credentials">
+              <i data-lucide="check"></i>
+              <span>Save Credentials</span>
+            </button>
+            <button class="clear-cred-btn" id="spotify-clear-credentials" style="display: none;">
+              <i data-lucide="trash-2"></i>
+              <span>Clear Keys</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Dynamic Loader for Spotify -->
+        <div class="loader-container" id="spotify-loader" style="display: none;">
+          <div class="spinner spotify-spinner"></div>
+          <p class="loader-text">Querying Spotify and YouTube Music...</p>
+        </div>
+
+        <!-- Spotify Results Panel -->
+        <div class="spotify-result-container" id="spotify-result" style="display: none;">
+          
+          <!-- Single Song Result Preview -->
+          <div class="yt-single-preview spotify-single-preview glass-card" id="spotify-single-preview" style="display: none;">
+            <div class="yt-single-card-body">
+              <img id="spotify-single-cover" src="" alt="Album Art" class="yt-song-cover">
+              <div class="yt-song-details">
+                <h3 id="spotify-single-title">Track Title</h3>
+                <p id="spotify-single-artist" class="yt-song-artist">Artist Name</p>
+                <div class="yt-song-meta">
+                  <span class="meta-badge"><i data-lucide="clock"></i> <span id="spotify-single-duration">0:00</span></span>
+                  <span class="meta-badge success spotify-badge"><i data-lucide="shield-check"></i> Resolved Stream</span>
+                </div>
+              </div>
+            </div>
+            <button class="primary-btn download-single-btn spotify-download-btn" id="spotify-single-download-btn">
+              <i data-lucide="download"></i>
+              <span>Download Best Quality Audio</span>
+            </button>
+          </div>
+
+          <!-- Playlist Results Container -->
+          <div class="yt-playlist-container spotify-playlist-container" id="spotify-playlist-container" style="display: none;">
+            
+            <!-- Playlist Meta Header -->
+            <div class="profile-meta-header glass-card spotify-playlist-header">
+              <img id="spotify-playlist-cover" src="" alt="Playlist Cover" class="profile-header-avatar">
+              <div class="profile-header-text">
+                <div class="profile-title-row">
+                  <h2 id="spotify-playlist-name">Playlist Name</h2>
+                  <span class="handle-badge spotify-badge" id="spotify-playlist-badge">Spotify Playlist</span>
+                </div>
+                <p class="profile-header-bio">Created by <span id="spotify-playlist-creator" style="font-weight: 500; color: #fff;">Creator</span> &bull; <span id="spotify-playlist-track-count">0</span> tracks found</p>
+              </div>
+            </div>
+
+            <!-- Multi-Select Action Bar -->
+            <div class="media-action-bar">
+              <div class="selector-controls">
+                <label class="custom-checkbox-container">
+                  <input type="checkbox" id="select-all-spotify-tracks">
+                  <span class="checkmark spotify-checkmark"></span>
+                  <span class="checkbox-label">Select All</span>
+                </label>
+                <button class="deselect-btn" id="deselect-all-spotify-btn" style="display: none;">
+                  <i data-lucide="x-circle"></i>
+                  <span>Deselect All</span>
+                </button>
+                <span class="selection-count" id="spotify-selection-status">0 tracks selected</span>
+              </div>
+              
+              <div class="action-buttons-group">
+                <button class="download-all-btn spotify-download-all-btn" id="spotify-download-all-trigger">
+                  <i data-lucide="download-cloud"></i>
+                  <span>Download All</span>
+                </button>
+                <button class="batch-download-btn disabled spotify-batch-download-btn" id="spotify-batch-download-trigger">
+                  <i data-lucide="download"></i>
+                  <span>Download Selected</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Responsive Track checklist list -->
+            <div class="yt-track-list spotify-track-list" id="spotify-playlist-track-list">
               <!-- Playlist track items injected dynamically via JS -->
             </div>
 

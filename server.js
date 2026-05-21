@@ -825,6 +825,289 @@ app.get('/api/yt/download', async (req, res) => {
 });
 
 /**
+ * ============================================================================
+ * SPOTIFY HUB SUITE ENDPOINTS & HELPERS
+ * ============================================================================
+ */
+
+// Helper to request a Spotify API Access Token via Client Credentials
+async function getSpotifyToken(clientId, clientSecret) {
+  if (!clientId || !clientSecret) {
+    throw new Error('Spotify Client ID and Client Secret are required.');
+  }
+  const auth = Buffer.from(`${clientId.trim()}:${clientSecret.trim()}`).toString('base64');
+  try {
+    const response = await axios.post('https://accounts.spotify.com/api/token', 'grant_type=client_credentials', {
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      timeout: 10000
+    });
+    return response.data.access_token;
+  } catch (err) {
+    console.error('[API/Spotify] Token retrieval failed:', err.response?.data || err.message);
+    throw new Error(err.response?.data?.error_description || err.message);
+  }
+}
+
+// Helper to search YouTube for the best-matching video ID
+async function searchYoutubeTrack(artist, title) {
+  const query = `ytsearch1:${artist} ${title} audio`;
+  console.log(`[API/Spotify] Searching YouTube for track: "${query}"`);
+  try {
+    const info = await youtubedl(query, getYoutubeDlOptions({
+      dumpSingleJson: true
+    }));
+    
+    let ytId = '';
+    if (info && info.entries && info.entries.length > 0) {
+      ytId = info.entries[0].id;
+    } else if (info && info.id) {
+      ytId = info.id;
+    }
+
+    if (!ytId) {
+      throw new Error('No video ID returned from search results.');
+    }
+
+    console.log(`[API/Spotify] Resolved search success! Video ID: ${ytId} for "${artist} - ${title}"`);
+    return ytId;
+  } catch (err) {
+    console.error(`[API/Spotify] YouTube search failed for "${artist} - ${title}":`, err.message);
+    throw err;
+  }
+}
+
+/**
+ * Endpoint to fetch Spotify track, album, or playlist metadata.
+ * Tracks are scraped anonymously via embeds. Playlists/albums require client keys.
+ */
+app.get('/api/spotify/info', async (req, res) => {
+  const { url } = req.query;
+  if (!url) {
+    return res.status(400).json({ success: false, error: 'Spotify URL is required' });
+  }
+
+  console.log(`[API/Spotify] Inspecting Spotify URL: ${url}`);
+  try {
+    // Parse URL types and IDs
+    const spotifyRegex = /spotify\.com\/(track|playlist|album)\/([a-zA-Z0-9]+)/;
+    const match = url.match(spotifyRegex);
+    if (!match) {
+      return res.status(400).json({ success: false, error: 'Invalid Spotify link structure. Please enter a valid track, album, or playlist URL.' });
+    }
+
+    const [, type, id] = match;
+
+    if (type === 'track') {
+      console.log(`[API/Spotify] Scraping Single Track Embed for ID: ${id}`);
+      const embedUrl = `https://open.spotify.com/embed/track/${id}?utm_source=generator`;
+      
+      const embedResponse = await axios.get(embedUrl, {
+        headers: BROWSER_HEADERS,
+        timeout: 10000
+      });
+
+      const $ = cheerio.load(embedResponse.data);
+      const nextDataText = $('#__NEXT_DATA__').text();
+      if (!nextDataText) {
+        throw new Error('Failed to parse metadata blocks. The embed template may have changed.');
+      }
+
+      const parsed = JSON.parse(nextDataText);
+      const entity = parsed.props?.pageProps?.state?.data?.entity;
+      if (!entity) {
+        throw new Error('Track metadata not found. The track might be private or region-restricted.');
+      }
+
+      const title = entity.name || 'Unknown Track';
+      const artist = entity.artists?.map(a => a.name).join(', ') || 'Unknown Artist';
+      const duration = Math.round(entity.duration_ms / 1000) || 0;
+      const thumbnail = entity.album?.images?.[0]?.url || '';
+
+      // Perform YouTube search on-the-fly for single tracks
+      let youtubeId = '';
+      try {
+        youtubeId = await searchYoutubeTrack(artist, title);
+      } catch (searchErr) {
+        console.warn(`[API/Spotify] YouTube search failed during info phase: ${searchErr.message}`);
+      }
+
+      return res.json({
+        success: true,
+        type: 'track',
+        id,
+        title,
+        artist,
+        thumbnail,
+        duration,
+        youtubeId
+      });
+
+    } else {
+      // Playlists and Albums require Client Credentials
+      const clientId = req.headers['x-spotify-client-id'] || process.env.SPOTIFY_CLIENT_ID;
+      const clientSecret = req.headers['x-spotify-client-secret'] || process.env.SPOTIFY_CLIENT_SECRET;
+
+      if (!clientId || !clientSecret) {
+        console.log(`[API/Spotify] Playlist/Album request missing API credentials. Prompting user.`);
+        return res.json({
+          success: false,
+          needsCredentials: true,
+          error: 'Spotify Client ID and Client Secret are required to fetch albums or playlists. You can set them in the settings panel.'
+        });
+      }
+
+      console.log(`[API/Spotify] Fetching playlist/album with API credentials. ID: ${id}, Type: ${type}`);
+      const token = await getSpotifyToken(clientId, clientSecret);
+
+      if (type === 'playlist') {
+        const response = await axios.get(`https://api.spotify.com/v1/playlists/${id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          timeout: 10000
+        });
+
+        const playlist = response.data;
+        const playlistName = playlist.name || 'Spotify Playlist';
+        const creatorName = playlist.owner?.display_name || 'Spotify Creator';
+        const coverArtUrl = playlist.images?.[0]?.url || '';
+
+        const tracks = playlist.tracks?.items
+          .filter(item => item && item.track)
+          .map(item => {
+            const track = item.track;
+            return {
+              id: track.id,
+              title: track.name || 'Unknown Track',
+              artist: track.artists?.map(a => a.name).join(', ') || 'Unknown Artist',
+              thumbnail: track.album?.images?.[0]?.url || coverArtUrl,
+              duration: Math.round(track.duration_ms / 1000) || 0
+            };
+          }) || [];
+
+        console.log(`[API/Spotify] Successfully loaded playlist: "${playlistName}" (${tracks.length} tracks)`);
+        return res.json({
+          success: true,
+          type: 'playlist',
+          id,
+          title: playlistName,
+          artist: creatorName,
+          thumbnail: coverArtUrl,
+          entriesCount: tracks.length,
+          entries: tracks
+        });
+
+      } else if (type === 'album') {
+        const response = await axios.get(`https://api.spotify.com/v1/albums/${id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          timeout: 10000
+        });
+
+        const album = response.data;
+        const albumName = album.name || 'Spotify Album';
+        const artistName = album.artists?.map(a => a.name).join(', ') || 'Unknown Artist';
+        const coverArtUrl = album.images?.[0]?.url || '';
+
+        const tracks = album.tracks?.items
+          .filter(track => track)
+          .map(track => {
+            return {
+              id: track.id,
+              title: track.name || 'Unknown Track',
+              artist: track.artists?.map(a => a.name).join(', ') || artistName,
+              thumbnail: coverArtUrl,
+              duration: Math.round(track.duration_ms / 1000) || 0
+            };
+          }) || [];
+
+        console.log(`[API/Spotify] Successfully loaded album: "${albumName}" (${tracks.length} tracks)`);
+        return res.json({
+          success: true,
+          type: 'playlist', // Mapped as 'playlist' structure for unified frontend rendering
+          id,
+          title: albumName,
+          artist: artistName,
+          thumbnail: coverArtUrl,
+          entriesCount: tracks.length,
+          entries: tracks
+        });
+      }
+    }
+  } catch (error) {
+    console.error('[API/Spotify] Error fetching Spotify metadata:', error.message);
+    return res.status(500).json({
+      success: false,
+      error: `Failed to scrape Spotify link: ${error.message}`
+    });
+  }
+});
+
+/**
+ * Endpoint to dynamically resolve Spotify track title + artist to a YouTube Video ID,
+ * and then stream the best progressive M4A audio stream directly to the client browser on-the-fly.
+ */
+app.get('/api/spotify/download', async (req, res) => {
+  const { title, artist } = req.query;
+  if (!title || !artist) {
+    return res.status(400).send('Spotify track title and artist are required');
+  }
+
+  console.log(`[API/Spotify] Resolving stream for: "${artist} - ${title}"`);
+  try {
+    // 1. YouTube search on-the-fly
+    const youtubeId = await searchYoutubeTrack(artist, title);
+    const url = `https://www.youtube.com/watch?v=${youtubeId}`;
+
+    // Clean filename
+    const cleanFilename = `${artist} - ${title}`.replace(/[\\/:*?"<>|]/g, '_').trim();
+
+    // 2. Get direct CDN Progressive stream url for best progressive audio
+    const streamUrl = await youtubedl(url, getYoutubeDlOptions({
+      getUrl: true,
+      format: 'bestaudio[ext=m4a]/bestaudio'
+    }));
+
+    const targetStreamUrl = streamUrl.trim();
+    if (!targetStreamUrl) {
+      throw new Error('Direct progressive stream URL could not be resolved');
+    }
+
+    console.log(`[API/Spotify] Progressive stream resolved. Streaming audio stream to browser...`);
+
+    // 3. Initiate progressive binary stream
+    const response = await axios({
+      method: 'get',
+      url: targetStreamUrl,
+      responseType: 'stream',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': 'https://www.youtube.com/',
+        'Origin': 'https://www.youtube.com'
+      }
+    });
+
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(cleanFilename)}.m4a"`);
+    res.setHeader('Content-Type', 'audio/x-m4a');
+    if (response.headers['content-length']) {
+      res.setHeader('Content-Length', response.headers['content-length']);
+    }
+
+    response.data.pipe(res);
+
+  } catch (error) {
+    console.error('[API/Spotify] Download failed:', error.message);
+    if (!res.headersSent) {
+      res.status(500).send(`Failed to stream Spotify audio from YouTube Music: ${error.message}`);
+    }
+  }
+});
+
+/**
  * CORS proxy endpoint to stream binary files (images/videos) directly to the browser.
  * This is crucial for bypassing browser-side CORS blocks on CDN domains (*.fbcdn.net).
  */

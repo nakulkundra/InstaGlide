@@ -66,6 +66,41 @@ document.addEventListener("DOMContentLoaded", () => {
   const ytBatchDownloadTrigger = document.getElementById("yt-batch-download-trigger");
   const ytPlaylistTrackList = document.getElementById("yt-playlist-track-list");
 
+  // ==========================================
+  // Spotify Hub Elements
+  // ==========================================
+  const spotifyUrlInput = document.getElementById("spotify-url");
+  const spotifyClearBtn = document.getElementById("spotify-clear");
+  const spotifySubmitBtn = document.getElementById("spotify-submit");
+  const spotifyLoader = document.getElementById("spotify-loader");
+  const spotifyResult = document.getElementById("spotify-result");
+  const spotifySettingsToggle = document.getElementById("spotify-settings-toggle");
+  const spotifySettingsPanel = document.getElementById("spotify-settings-panel");
+  const spotifyClientIdInput = document.getElementById("spotify-client-id");
+  const spotifyClientSecretInput = document.getElementById("spotify-client-secret");
+  const spotifySaveCredentialsBtn = document.getElementById("spotify-save-credentials");
+  const spotifyClearCredentialsBtn = document.getElementById("spotify-clear-credentials");
+
+  const spotifySinglePreview = document.getElementById("spotify-single-preview");
+  const spotifySingleCover = document.getElementById("spotify-single-cover");
+  const spotifySingleTitle = document.getElementById("spotify-single-title");
+  const spotifySingleArtist = document.getElementById("spotify-single-artist");
+  const spotifySingleDuration = document.getElementById("spotify-single-duration");
+  const spotifySingleDownloadBtn = document.getElementById("spotify-single-download-btn");
+
+  const spotifyPlaylistContainer = document.getElementById("spotify-playlist-container");
+  const spotifyPlaylistCover = document.getElementById("spotify-playlist-cover");
+  const spotifyPlaylistName = document.getElementById("spotify-playlist-name");
+  const spotifyPlaylistCreator = document.getElementById("spotify-playlist-creator");
+  const spotifyPlaylistTrackCount = document.getElementById("spotify-playlist-track-count");
+
+  const selectAllSpotifyCheckbox = document.getElementById("select-all-spotify-tracks");
+  const deselectAllSpotifyBtn = document.getElementById("deselect-all-spotify-btn");
+  const spotifySelectionStatus = document.getElementById("spotify-selection-status");
+  const spotifyDownloadAllTrigger = document.getElementById("spotify-download-all-trigger");
+  const spotifyBatchDownloadTrigger = document.getElementById("spotify-batch-download-trigger");
+  const spotifyPlaylistTrackList = document.getElementById("spotify-playlist-track-list");
+
   // Global Error & History Elements
   const globalError = document.getElementById("global-error");
   const errorMessage = document.getElementById("error-message");
@@ -90,6 +125,12 @@ document.addEventListener("DOMContentLoaded", () => {
   let selectedYtTracks = new Set(); // Set of video IDs selected
   let isDownloadingYtBatch = false;
   let currentYtData = null; // Stored metadata for single track/playlist
+
+  // Spotify Hub State
+  let spotifyTracks = []; // Currently explored Spotify playlist tracks
+  let selectedSpotifyTracks = new Set(); // Set of Spotify track IDs selected
+  let isDownloadingSpotifyBatch = false;
+  let currentSpotifyData = null; // Stored metadata for single track/playlist
 
   // Render Activity History on Boot
   renderHistory();
@@ -120,6 +161,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupInputField(singleUrlInput, singleClearBtn);
   setupInputField(profileHandleInput, profileClearBtn);
   setupInputField(ytUrlInput, ytClearBtn);
+  setupInputField(spotifyUrlInput, spotifyClearBtn);
 
   function setupInputField(input, clearBtn) {
     input.addEventListener("input", () => {
@@ -1102,6 +1144,393 @@ document.addEventListener("DOMContentLoaded", () => {
   function forceBrowserYtDownload(id) {
     const downloadLink = document.createElement("a");
     downloadLink.href = `/api/yt/download?id=${encodeURIComponent(id)}`;
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+  }
+
+  /* ==========================================
+     9. Spotify Hub Downloader Suite
+     ========================================== */
+  // Load Spotify API credentials from localStorage on boot
+  function loadSpotifyCredentials() {
+    const clientId = localStorage.getItem("spotify_client_id") || "";
+    const clientSecret = localStorage.getItem("spotify_client_secret") || "";
+    spotifyClientIdInput.value = clientId;
+    spotifyClientSecretInput.value = clientSecret;
+    if (clientId && clientSecret) {
+      spotifyClearCredentialsBtn.style.display = "flex";
+    } else {
+      spotifyClearCredentialsBtn.style.display = "none";
+    }
+  }
+
+  loadSpotifyCredentials();
+
+  // Save Credentials Click Listener
+  spotifySaveCredentialsBtn.addEventListener("click", () => {
+    const id = spotifyClientIdInput.value.trim();
+    const secret = spotifyClientSecretInput.value.trim();
+    if (!id || !secret) {
+      showError("Please enter both a Spotify Client ID and Client Secret.");
+      return;
+    }
+    localStorage.setItem("spotify_client_id", id);
+    localStorage.setItem("spotify_client_secret", secret);
+    spotifyClearCredentialsBtn.style.display = "flex";
+    
+    // Quick success animation/indicator
+    const originalText = spotifySaveCredentialsBtn.innerHTML;
+    spotifySaveCredentialsBtn.innerHTML = `<i data-lucide="check"></i> <span>Saved!</span>`;
+    lucide.createIcons();
+    setTimeout(() => {
+      spotifySaveCredentialsBtn.innerHTML = originalText;
+      lucide.createIcons();
+    }, 2000);
+  });
+
+  // Clear Credentials Click Listener
+  spotifyClearCredentialsBtn.addEventListener("click", () => {
+    localStorage.removeItem("spotify_client_id");
+    localStorage.removeItem("spotify_client_secret");
+    spotifyClientIdInput.value = "";
+    spotifyClientSecretInput.value = "";
+    spotifyClearCredentialsBtn.style.display = "none";
+    
+    const originalText = spotifyClearCredentialsBtn.innerHTML;
+    spotifyClearCredentialsBtn.innerHTML = `<span>Cleared!</span>`;
+    setTimeout(() => {
+      spotifyClearCredentialsBtn.innerHTML = originalText;
+    }, 2000);
+  });
+
+  // Toggle API Credentials Panel
+  spotifySettingsToggle.addEventListener("click", () => {
+    if (spotifySettingsPanel.style.display === "none") {
+      spotifySettingsPanel.style.display = "block";
+      spotifySettingsToggle.classList.add("active");
+    } else {
+      spotifySettingsPanel.style.display = "none";
+      spotifySettingsToggle.classList.remove("active");
+    }
+  });
+
+  // Form Submit triggers
+  spotifySubmitBtn.addEventListener("click", handleSpotifySubmit);
+  spotifyUrlInput.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") handleSpotifySubmit();
+  });
+
+  async function handleSpotifySubmit() {
+    const rawUrl = spotifyUrlInput.value.trim();
+    hideError();
+    spotifyResult.style.display = "none";
+    spotifySinglePreview.style.display = "none";
+    spotifyPlaylistContainer.style.display = "none";
+
+    if (!rawUrl) {
+      showError("Please enter a valid Spotify Track, Album, or Playlist URL.");
+      return;
+    }
+
+    if (!rawUrl.includes("spotify.com/")) {
+      showError("Invalid Spotify URL. Please enter a valid open.spotify.com link.");
+      return;
+    }
+
+    // Enter loading state
+    spotifyLoader.style.display = "flex";
+    spotifySubmitBtn.disabled = true;
+
+    // Get stored API keys (if any)
+    const clientId = localStorage.getItem("spotify_client_id") || "";
+    const clientSecret = localStorage.getItem("spotify_client_secret") || "";
+
+    try {
+      const response = await fetch(`/api/spotify/info?url=${encodeURIComponent(rawUrl)}`, {
+        headers: {
+          "X-Spotify-Client-Id": clientId,
+          "X-Spotify-Client-Secret": clientSecret
+        }
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to extract Spotify content.");
+      }
+
+      if (data.needsCredentials) {
+        // Automatically show credential card and warn user
+        spotifySettingsPanel.style.display = "block";
+        spotifySettingsToggle.classList.add("active");
+        spotifySettingsPanel.scrollIntoView({ behavior: "smooth", block: "center" });
+        throw new Error(data.error || "Client Credentials are required for Albums and Playlists.");
+      }
+
+      if (!data.success) {
+        throw new Error(data.error || "Failed to extract Spotify content.");
+      }
+
+      currentSpotifyData = data;
+
+      if (data.type === "playlist") {
+        // Populate Playlist View
+        spotifyPlaylistCover.src = data.thumbnail || "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=300&auto=format&fit=crop";
+        spotifyPlaylistName.textContent = data.title;
+        spotifyPlaylistCreator.textContent = data.artist;
+        spotifyPlaylistTrackCount.textContent = data.entriesCount;
+
+        spotifyTracks = data.entries;
+        selectedSpotifyTracks.clear();
+
+        // Clear and render track checklist
+        spotifyPlaylistTrackList.innerHTML = "";
+        
+        if (spotifyTracks.length === 0) {
+          spotifyPlaylistTrackList.innerHTML = `
+            <div class="history-empty-state" style="grid-column: 1 / -1;">
+              <i data-lucide="music-4"></i>
+              <p>This playlist/album does not contain any tracks.</p>
+            </div>
+          `;
+        } else {
+          spotifyTracks.forEach((track, idx) => {
+            const item = document.createElement("div");
+            item.classList.add("yt-track-item", "spotify-track-item");
+            item.setAttribute("data-track-id", track.id);
+
+            item.innerHTML = `
+              <div class="card-checkbox spotify-card-checkbox"><i data-lucide="check"></i></div>
+              <div class="yt-track-index">${idx + 1}</div>
+              <img src="${track.thumbnail}" class="yt-track-cover" alt="Track Cover" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=80&auto=format&fit=crop'">
+              <div class="yt-track-info">
+                <div class="yt-track-title">${track.title}</div>
+                <div class="yt-track-artist">${track.artist}</div>
+              </div>
+              <div class="yt-track-duration">${formatDuration(track.duration)}</div>
+            `;
+
+            // Toggle select on click
+            item.addEventListener("click", () => {
+              toggleSpotifyTrackSelection(track.id, item);
+            });
+
+            spotifyPlaylistTrackList.appendChild(item);
+          });
+        }
+
+        updateSpotifySelectionUI();
+        spotifyPlaylistContainer.style.display = "flex";
+      } else {
+        // Populate Single Song View
+        spotifySingleCover.src = data.thumbnail || "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=300&auto=format&fit=crop";
+        spotifySingleTitle.textContent = data.title;
+        spotifySingleArtist.textContent = data.artist;
+        spotifySingleDuration.textContent = formatDuration(data.duration);
+
+        // Setup single download button trigger
+        spotifySingleDownloadBtn.onclick = () => {
+          forceBrowserSpotifySingleDownload(data);
+          saveToHistory({
+            shortcode: data.id,
+            creator: data.artist || "Spotify Hub",
+            thumbnail: data.thumbnail,
+            type: "audio",
+            caption: data.title,
+            downloadUrl: data.youtubeId ? `/api/yt/download?id=${data.youtubeId}` : `/api/spotify/download?title=${encodeURIComponent(data.title)}&artist=${encodeURIComponent(data.artist)}`
+          });
+        };
+
+        spotifySinglePreview.style.display = "flex";
+      }
+
+      spotifyResult.style.display = "flex";
+      lucide.createIcons();
+
+    } catch (err) {
+      console.error(err);
+      showError(err.message || "An error occurred while connecting to our Spotify resolver.");
+    } finally {
+      spotifyLoader.style.display = "none";
+      spotifySubmitBtn.disabled = false;
+    }
+  }
+
+  function toggleSpotifyTrackSelection(id, element) {
+    if (selectedSpotifyTracks.has(id)) {
+      selectedSpotifyTracks.delete(id);
+      element.classList.remove("selected");
+    } else {
+      selectedSpotifyTracks.add(id);
+      element.classList.add("selected");
+    }
+    updateSpotifySelectionUI();
+  }
+
+  function updateSpotifySelectionUI() {
+    const count = selectedSpotifyTracks.size;
+    spotifySelectionStatus.textContent = `${count} track${count !== 1 ? 's' : ''} selected`;
+
+    if (count > 0) {
+      spotifyBatchDownloadTrigger.classList.remove("disabled");
+      deselectAllSpotifyBtn.style.display = "flex";
+    } else {
+      spotifyBatchDownloadTrigger.classList.add("disabled");
+      deselectAllSpotifyBtn.style.display = "none";
+    }
+
+    if (spotifyTracks.length > 0 && count === spotifyTracks.length) {
+      selectAllSpotifyCheckbox.checked = true;
+    } else {
+      selectAllSpotifyCheckbox.checked = false;
+    }
+  }
+
+  selectAllSpotifyCheckbox.addEventListener("change", () => {
+    const trackElements = document.querySelectorAll(".spotify-track-item");
+    if (selectAllSpotifyCheckbox.checked) {
+      spotifyTracks.forEach(track => selectedSpotifyTracks.add(track.id));
+      trackElements.forEach(el => el.classList.add("selected"));
+    } else {
+      selectedSpotifyTracks.clear();
+      trackElements.forEach(el => el.classList.remove("selected"));
+    }
+    updateSpotifySelectionUI();
+  });
+
+  deselectAllSpotifyBtn.addEventListener("click", () => {
+    selectedSpotifyTracks.clear();
+    const trackElements = document.querySelectorAll(".spotify-track-item");
+    trackElements.forEach(el => el.classList.remove("selected"));
+    updateSpotifySelectionUI();
+  });
+
+  // Batch download trigger click bindings
+  spotifyBatchDownloadTrigger.addEventListener("click", startSpotifyBatchDownloadingQueue);
+
+  // Download All click bindings
+  spotifyDownloadAllTrigger.addEventListener("click", () => {
+    if (spotifyTracks.length === 0 || isDownloadingSpotifyBatch) return;
+    const trackElements = document.querySelectorAll(".spotify-track-item");
+    spotifyTracks.forEach(track => selectedSpotifyTracks.add(track.id));
+    trackElements.forEach(el => el.classList.add("selected"));
+    selectAllSpotifyCheckbox.checked = true;
+    updateSpotifySelectionUI();
+    startSpotifyBatchDownloadingQueue();
+  });
+
+  async function startSpotifyBatchDownloadingQueue() {
+    if (selectedSpotifyTracks.size === 0 || isDownloadingSpotifyBatch) return;
+
+    isDownloadingSpotifyBatch = true;
+    spotifyBatchDownloadTrigger.classList.add("disabled");
+    selectAllSpotifyCheckbox.disabled = true;
+
+    // Open sliding progress panel overlay
+    queueOverlay.style.display = "block";
+    queueProgressBar.style.width = "0%";
+    queuePercentage.textContent = "0%";
+
+    const selectedIds = Array.from(selectedSpotifyTracks);
+    const totalItems = selectedIds.length;
+    let successCount = 0;
+
+    for (let index = 0; index < totalItems; index++) {
+      const id = selectedIds[index];
+      const track = spotifyTracks.find(t => t.id === id);
+
+      if (!track) continue;
+
+      const element = document.querySelector(`.spotify-track-item[data-track-id="${id}"]`);
+      if (element) {
+        element.classList.add("downloading");
+      }
+
+      // Update progress UI
+      const percent = Math.round((index / totalItems) * 100);
+      queueStatusText.textContent = `Downloading track ${index + 1} of ${totalItems}...`;
+      queuePercentage.textContent = `${percent}%`;
+      queueProgressBar.style.width = `${percent}%`;
+      queueFileLabel.textContent = `Preparing stream: ${track.title}...`;
+
+      try {
+        queueFileLabel.textContent = `Streaming file: ${track.artist} - ${track.title}.m4a`;
+        
+        // Trigger physical download
+        forceBrowserSpotifyDownload(track.title, track.artist);
+        successCount++;
+
+        if (element) {
+          element.classList.remove("downloading");
+          element.classList.add("downloaded");
+        }
+
+        // Save to history
+        saveToHistory({
+          shortcode: track.id,
+          creator: track.artist || "Spotify Hub",
+          thumbnail: track.thumbnail,
+          type: "audio",
+          caption: track.title,
+          downloadUrl: `/api/spotify/download?title=${encodeURIComponent(track.title)}&artist=${encodeURIComponent(track.artist)}`
+        });
+
+      } catch (err) {
+        console.error(`Failed to download Spotify track: ${track.title}`, err);
+        if (element) {
+          element.classList.remove("downloading");
+        }
+      }
+
+      // Rate-limiting pause (1500ms) to avoid server load & ensure browser download queue fires
+      await sleep(1500);
+    }
+
+    // Complete queue progress
+    queueStatusText.textContent = `Batch complete! Successfully saved ${successCount} of ${totalItems} tracks.`;
+    queuePercentage.textContent = "100%";
+    queueProgressBar.style.width = "100%";
+    queueFileLabel.textContent = "All tracks downloaded.";
+
+    // Re-enable and reset select UI
+    isDownloadingSpotifyBatch = false;
+    selectAllSpotifyCheckbox.disabled = false;
+    selectAllSpotifyCheckbox.checked = false;
+    selectedSpotifyTracks.clear();
+    updateSpotifySelectionUI();
+
+    // Deselect and clear statuses
+    setTimeout(() => {
+      const trackElements = document.querySelectorAll(".spotify-track-item");
+      trackElements.forEach(el => {
+        el.classList.remove("selected");
+        el.classList.remove("downloaded");
+      });
+    }, 2000);
+
+    // Automatically hide queue overlay after 4 seconds
+    setTimeout(() => {
+      if (!isDownloadingSpotifyBatch && !isDownloadingBatch) {
+        queueOverlay.style.display = "none";
+      }
+    }, 4000);
+  }
+
+  function forceBrowserSpotifyDownload(title, artist) {
+    const downloadLink = document.createElement("a");
+    downloadLink.href = `/api/spotify/download?title=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist)}`;
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+  }
+
+  function forceBrowserSpotifySingleDownload(data) {
+    const downloadLink = document.createElement("a");
+    if (data.youtubeId) {
+      downloadLink.href = `/api/yt/download?id=${encodeURIComponent(data.youtubeId)}`;
+    } else {
+      downloadLink.href = `/api/spotify/download?title=${encodeURIComponent(data.title)}&artist=${encodeURIComponent(data.artist)}`;
+    }
     document.body.appendChild(downloadLink);
     downloadLink.click();
     document.body.removeChild(downloadLink);
