@@ -89,11 +89,15 @@ function getYoutubeDlOptions(extraParams = {}) {
 
   const cookiesPath = path.resolve(__dirname, 'cookies.txt');
   if (fs.existsSync(cookiesPath)) {
-    console.log(`[API/YT] Auto-detected cookies.txt at: ${cookiesPath}. Attaching to yt-dlp.`);
+    const stats = fs.statSync(cookiesPath);
+    console.log(`[API/YT] Auto-detected cookies.txt at: ${cookiesPath} (Size: ${stats.size} bytes). Attaching to yt-dlp.`);
     options.cookies = cookiesPath;
-  } else if (process.env.NODE_ENV !== 'production') {
-    console.log(`[API/YT] Local development active. Missing cookies.txt. Trying to read cookies from local Chrome...`);
-    options.cookiesFromBrowser = 'chrome';
+  } else {
+    console.warn(`[API/YT] WARNING: cookies.txt NOT found at: ${cookiesPath}`);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[API/YT] Local development active. Trying to read cookies from local Chrome...`);
+      options.cookiesFromBrowser = 'chrome';
+    }
   }
 
   return options;
