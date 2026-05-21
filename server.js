@@ -87,13 +87,20 @@ function getYoutubeDlOptions(extraParams = {}) {
     ...extraParams
   };
 
-  const cookiesPath = path.resolve(__dirname, 'cookies.txt');
-  if (fs.existsSync(cookiesPath)) {
+  let cookiesPath = path.resolve(__dirname, 'cookies.txt');
+  const renderSecretsPath = '/etc/secrets/cookies.txt';
+
+  if (fs.existsSync(renderSecretsPath)) {
+    cookiesPath = renderSecretsPath;
     const stats = fs.statSync(cookiesPath);
-    console.log(`[API/YT] Auto-detected cookies.txt at: ${cookiesPath} (Size: ${stats.size} bytes). Attaching to yt-dlp.`);
+    console.log(`[API/YT] Auto-detected cookies.txt at Render Secrets path: ${cookiesPath} (Size: ${stats.size} bytes). Attaching to yt-dlp.`);
+    options.cookies = cookiesPath;
+  } else if (fs.existsSync(cookiesPath)) {
+    const stats = fs.statSync(cookiesPath);
+    console.log(`[API/YT] Auto-detected cookies.txt at local path: ${cookiesPath} (Size: ${stats.size} bytes). Attaching to yt-dlp.`);
     options.cookies = cookiesPath;
   } else {
-    console.warn(`[API/YT] WARNING: cookies.txt NOT found at: ${cookiesPath}`);
+    console.warn(`[API/YT] WARNING: cookies.txt NOT found at both Render Secrets path (${renderSecretsPath}) and local path (${cookiesPath})!`);
     if (process.env.NODE_ENV !== 'production') {
       console.log(`[API/YT] Local development active. Trying to read cookies from local Chrome...`);
       options.cookiesFromBrowser = 'chrome';
