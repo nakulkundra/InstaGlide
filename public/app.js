@@ -44,6 +44,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const ytSubmitBtn = document.getElementById("yt-submit");
   const ytLoader = document.getElementById("yt-loader");
   const ytResult = document.getElementById("yt-result");
+  const ytSandboxCard = document.getElementById("yt-sandbox-card");
 
   const ytSinglePreview = document.getElementById("yt-single-preview");
   const ytSingleCover = document.getElementById("yt-single-cover");
@@ -816,6 +817,7 @@ document.addEventListener("DOMContentLoaded", () => {
     ytResult.style.display = "none";
     ytSinglePreview.style.display = "none";
     ytPlaylistContainer.style.display = "none";
+    ytSandboxCard.style.display = "none";
 
     if (!rawUrl) {
       showError("Please enter a valid YouTube Music song or playlist URL.");
@@ -834,6 +836,14 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const response = await fetch(`/api/yt/info?url=${encodeURIComponent(rawUrl)}`);
       const data = await response.json();
+
+      if (data.isVercelSandbox) {
+        ytSandboxCard.style.display = "flex";
+        ytLoader.style.display = "none";
+        ytSubmitBtn.disabled = false;
+        lucide.createIcons();
+        return;
+      }
 
       if (!data.success) {
         throw new Error(data.error || "Failed to extract YouTube content.");
@@ -917,7 +927,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     } catch (err) {
       console.error(err);
-      showError(err.message || "An error occurred while connecting to our YouTube extractor.");
+      if (err.message && (err.message.includes("python") || err.message.includes("Sandbox") || err.message.includes("Vercel"))) {
+        ytSandboxCard.style.display = "flex";
+        lucide.createIcons();
+      } else {
+        showError(err.message || "An error occurred while connecting to our YouTube extractor.");
+      }
     } finally {
       ytLoader.style.display = "none";
       ytSubmitBtn.disabled = false;

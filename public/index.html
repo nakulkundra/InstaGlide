@@ -184,7 +184,7 @@
       </section>
 
       <!-- ================= YT MUSIC DOWNLOADER TAB ================= -->
-      <section id="tab-yt" class="tab-content" style="display: none;">
+      <section id="tab-yt" class="tab-content">
         <div class="input-group">
           <label for="yt-url">Enter YouTube Music Song or Playlist URL</label>
           <div class="input-wrapper">
@@ -198,6 +198,33 @@
             <span>Inspect Content</span>
             <i data-lucide="search"></i>
           </button>
+        </div>
+
+        <!-- Vercel Serverless Sandbox Alert -->
+        <div class="sandbox-warning-card glass-card" id="yt-sandbox-card" style="display: none;">
+          <div class="sandbox-header">
+            <div class="sandbox-icon-wrapper">
+              <i data-lucide="cloud-off" class="sandbox-icon"></i>
+            </div>
+            <div class="sandbox-title-group">
+              <h3>Vercel Serverless Sandbox Limitations</h3>
+              <span class="sandbox-tag">Platform Sandbox</span>
+            </div>
+          </div>
+          <div class="sandbox-body">
+            <p>AWS Lambda sandboxes on Vercel are highly restricted environments that lack a <strong>Python 3 interpreter</strong> (required for native <code>yt-dlp</code> extractions) and enforce a strict <strong>10-second request duration ceiling</strong>.</p>
+            <p class="sandbox-highlight">To fully unlock the <strong>YT Music Downloader & Playlist Suite</strong> with no sandbox bounds, deploy this project with one click to Render (which fully provisions Node + Python runtimes natively):</p>
+          </div>
+          <div class="sandbox-actions">
+            <a href="https://render.com/deploy?repo=https://github.com/nakulkundra/InstaGlide" target="_blank" class="primary-btn deploy-render-btn">
+              <i data-lucide="external-link"></i>
+              <span>Deploy to Render (Fully Unlocked)</span>
+            </a>
+            <div class="sandbox-local-tip">
+              <i data-lucide="terminal"></i>
+              <span>Or run locally: <code>npm run dev</code> for full native capabilities.</span>
+            </div>
+          </div>
         </div>
 
         <!-- Dynamic Loader for YT -->

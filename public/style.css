@@ -1698,3 +1698,157 @@ body {
   color: var(--text-muted);
 }
 
+/* ==========================================================================
+   Vercel Serverless Sandbox Alert Card
+   ========================================================================== */
+.sandbox-warning-card {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
+  margin-top: 8px;
+  margin-bottom: 24px;
+  background: rgba(234, 67, 53, 0.04); /* Subtle red warning glow */
+  border: 1px solid rgba(234, 67, 53, 0.15) !important;
+  box-shadow: 0 8px 32px rgba(234, 67, 53, 0.05);
+  animation: slide-down 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.sandbox-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.sandbox-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: rgba(234, 67, 53, 0.12);
+  border: 1px solid rgba(234, 67, 53, 0.25);
+}
+
+.sandbox-icon {
+  width: 22px;
+  height: 22px;
+  color: #EA4335; /* Google Red */
+}
+
+.sandbox-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sandbox-title-group h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.sandbox-tag {
+  align-self: flex-start;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(234, 67, 53, 0.15);
+  color: #EA4335;
+  border: 1px solid rgba(234, 67, 53, 0.2);
+}
+
+.sandbox-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sandbox-body p {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.sandbox-body strong {
+  color: var(--text-primary);
+}
+
+.sandbox-highlight {
+  padding-left: 12px;
+  border-left: 2px solid #4285F4; /* Google Blue */
+  font-style: italic;
+}
+
+.sandbox-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 4px;
+}
+
+.deploy-render-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #4285F4, #8B5CF6, #EC4899) !important; /* Gemini spark gradient */
+  border: none !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.25);
+  text-align: center;
+}
+
+.deploy-render-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(139, 92, 246, 0.4);
+  filter: brightness(1.05);
+}
+
+.deploy-render-btn:active {
+  transform: translateY(0);
+}
+
+.sandbox-local-tip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sandbox-local-tip i {
+  width: 14px;
+  height: 14px;
+  color: var(--text-secondary);
+}
+
+.sandbox-local-tip code {
+  font-family: var(--font-mono);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #8AB4F8; /* Light blue accent */
+}
+

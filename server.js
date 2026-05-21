@@ -555,6 +555,14 @@ app.get('/api/yt/info', async (req, res) => {
     }
   } catch (error) {
     console.error('[API/YT] Error fetching metadata:', error.message);
+    const isVercelSandbox = !!process.env.VERCEL || error.message.includes('python3') || error.message.includes('ENOENT');
+    if (isVercelSandbox) {
+      return res.status(500).json({
+        success: false,
+        isVercelSandbox: true,
+        error: 'Vercel Serverless Sandbox Limitations detected. AWS Lambda does not support python/yt-dlp binary extractions.'
+      });
+    }
     return res.status(500).json({
       success: false,
       error: `Failed to retrieve YouTube Music metadata: ${error.message}`
@@ -641,6 +649,15 @@ app.get('/api/yt/download', async (req, res) => {
   } catch (error) {
     console.error('[API/YT] Download failed:', error.message);
     if (!res.headersSent) {
+      const isVercelSandbox = !!process.env.VERCEL || error.message.includes('python3') || error.message.includes('ENOENT');
+      if (isVercelSandbox) {
+        res.setHeader('Content-Type', 'application/json');
+        return res.status(500).json({
+          success: false,
+          isVercelSandbox: true,
+          error: 'Vercel Serverless Sandbox Limitations detected. AWS Lambda does not support python/yt-dlp binary extractions.'
+        });
+      }
       res.status(500).send(`Failed to stream YouTube Music audio: ${error.message}`);
     }
   }
