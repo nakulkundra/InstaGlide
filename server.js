@@ -42,22 +42,12 @@ async function bootstrapYtDlp() {
   const binaryPath = path.join(binDir, binaryName);
 
   if (fs.existsSync(binaryPath)) {
-    console.log(`[API/YT] Found local yt-dlp binary at: ${binaryPath}`);
+    console.log(`[API/YT] Found local latest yt-dlp binary at: ${binaryPath}`);
     youtubedl = createYoutubeDl(binaryPath);
     return;
   }
 
-  // Check if system already has yt-dlp installed globally in PATH
-  try {
-    execSync('which yt-dlp');
-    console.log(`[API/YT] Found global 'yt-dlp' in system PATH. Initializing with it.`);
-    youtubedl = createYoutubeDl('yt-dlp');
-    return;
-  } catch (_) {
-    // If not in PATH, proceed to dynamic download
-  }
-
-  console.log(`[API/YT] yt-dlp binary not found. Dynamically downloading from: ${downloadUrl}`);
+  console.log(`[API/YT] yt-dlp binary not found. Dynamically downloading latest release from: ${downloadUrl}`);
   try {
     const response = await axios({
       method: 'GET',
@@ -66,7 +56,7 @@ async function bootstrapYtDlp() {
       headers: {
         'User-Agent': 'Mozilla/5.0'
       },
-      timeout: 30000 // 30s timeout for download
+      timeout: 45000 // 45s timeout for download
     });
 
     fs.writeFileSync(binaryPath, response.data);
@@ -75,8 +65,16 @@ async function bootstrapYtDlp() {
     youtubedl = createYoutubeDl(binaryPath);
   } catch (err) {
     console.error(`[API/YT] Dynamic yt-dlp download failed: ${err.message}`);
-    console.log(`[API/YT] Attempting standard fallback to default youtube-dl-exec...`);
-    youtubedl = createYoutubeDl();
+    
+    // Check if system already has yt-dlp installed globally in PATH as a fallback
+    try {
+      execSync('which yt-dlp');
+      console.log(`[API/YT] Fallback: Found global 'yt-dlp' in system PATH. Initializing with it.`);
+      youtubedl = createYoutubeDl('yt-dlp');
+    } catch (_) {
+      console.log(`[API/YT] Attempting standard fallback to default youtube-dl-exec...`);
+      youtubedl = createYoutubeDl();
+    }
   }
 }
 
@@ -85,6 +83,7 @@ function getYoutubeDlOptions(extraParams = {}) {
   const options = {
     noCheckCertificates: true,
     noWarnings: true,
+    jsRuntimes: 'node', // Crucial for solving YouTube signature 'n' challenges on modern player endpoints
     ...extraParams
   };
 
@@ -92,10 +91,14 @@ function getYoutubeDlOptions(extraParams = {}) {
   if (fs.existsSync(cookiesPath)) {
     console.log(`[API/YT] Auto-detected cookies.txt at: ${cookiesPath}. Attaching to yt-dlp.`);
     options.cookies = cookiesPath;
+  } else if (process.env.NODE_ENV !== 'production') {
+    console.log(`[API/YT] Local development active. Missing cookies.txt. Trying to read cookies from local Chrome...`);
+    options.cookiesFromBrowser = 'chrome';
   }
 
   return options;
 }
+
 
 // Enable CORS and JSON parsing
 app.use(cors());
