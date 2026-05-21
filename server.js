@@ -89,6 +89,7 @@ function getYoutubeDlOptions(extraParams = {}) {
 
   let cookiesPath = path.resolve(__dirname, 'cookies.txt');
   const renderSecretsPath = '/etc/secrets/cookies.txt';
+  const envCookies = process.env.YOUTUBE_COOKIES || process.env.YT_COOKIES || process.env.COOKIES_CONTENT;
 
   if (fs.existsSync(renderSecretsPath)) {
     cookiesPath = renderSecretsPath;
@@ -99,8 +100,19 @@ function getYoutubeDlOptions(extraParams = {}) {
     const stats = fs.statSync(cookiesPath);
     console.log(`[API/YT] Auto-detected cookies.txt at local path: ${cookiesPath} (Size: ${stats.size} bytes). Attaching to yt-dlp.`);
     options.cookies = cookiesPath;
+  } else if (envCookies) {
+    // Fallback: Check if cookies are supplied as a raw environment variable string (Netscape or JSON format)
+    const tempCookiesPath = path.join('/tmp', 'env_cookies.txt');
+    try {
+      fs.writeFileSync(tempCookiesPath, envCookies.trim());
+      const stats = fs.statSync(tempCookiesPath);
+      console.log(`[API/YT] Auto-detected cookies in environment variable. Wrote to temp path: ${tempCookiesPath} (Size: ${stats.size} bytes). Attaching to yt-dlp.`);
+      options.cookies = tempCookiesPath;
+    } catch (writeErr) {
+      console.error(`[API/YT] Failed to write environment cookies to temp file: ${writeErr.message}`);
+    }
   } else {
-    console.warn(`[API/YT] WARNING: cookies.txt NOT found at both Render Secrets path (${renderSecretsPath}) and local path (${cookiesPath})!`);
+    console.warn(`[API/YT] WARNING: cookies.txt NOT found at both Render Secrets path (${renderSecretsPath}) and local path (${cookiesPath})! No fallback environment cookies detected.`);
     if (process.env.NODE_ENV !== 'production') {
       console.log(`[API/YT] Local development active. Trying to read cookies from local Chrome...`);
       options.cookiesFromBrowser = 'chrome';
