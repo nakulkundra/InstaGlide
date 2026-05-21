@@ -1477,6 +1477,10 @@ body {
    15. YT MUSIC DOWNLOADER SUITE
    ========================================================================== */
 #tab-yt {
+  display: none;
+}
+
+#tab-yt.active {
   display: flex;
   flex-direction: column;
   gap: 24px;
