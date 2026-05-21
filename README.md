@@ -66,6 +66,16 @@ The server will boot up and report active listeners:
 
 Open your browser and navigate to **`http://localhost:3000`** to experience the dashboard.
 
+### 🍪 Bypassing YouTube Bot Challenges / "Sign in to confirm you're not a bot"
+If you host this application on cloud providers like Render or if your local IP is rate-limited by YouTube, you may encounter an error asking to **"Sign in to confirm you're not a bot"**. This is a standard security measure enforced by YouTube on datacenter IP addresses.
+
+To bypass this check safely and continue downloading high-fidelity streams:
+1. Log in to YouTube in your web browser (using a secondary or throwaway Google account is recommended for security).
+2. Install a browser extension that allows exporting cookies in Netscape format, such as **Get cookies.txt LOCALLY** (Chrome/Firefox).
+3. Navigate to YouTube, click the extension, and export/download your cookies in **Netscape** format.
+4. Save the downloaded file as **`cookies.txt`** and place it in the **root directory** of this project (same folder as `server.js`).
+5. The application backend will automatically detect the presence of `cookies.txt` at runtime and attach it to your `yt-dlp` requests, fully bypassing bot challenges!
+
 ### 🌐 Cloud Deployment (Render)
 InstaGlide includes a fully-configured `render.yaml` blueprint for instant cloud deployment:
 1. Create a free account on **[Render](https://render.com/)**.

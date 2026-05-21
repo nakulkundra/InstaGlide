@@ -4,6 +4,7 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 import dotenv from 'dotenv';
 import youtubedl from 'youtube-dl-exec';
 
@@ -15,6 +16,23 @@ const PORT = process.env.PORT || 3000;
 // Resolve __dirname for ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Helper to get yt-dlp options with auto-detected cookies.txt to bypass YouTube bot detection
+function getYoutubeDlOptions(extraParams = {}) {
+  const options = {
+    noCheckCertificates: true,
+    noWarnings: true,
+    ...extraParams
+  };
+
+  const cookiesPath = path.resolve(__dirname, 'cookies.txt');
+  if (fs.existsSync(cookiesPath)) {
+    console.log(`[API/YT] Auto-detected cookies.txt at: ${cookiesPath}. Attaching to yt-dlp.`);
+    options.cookies = cookiesPath;
+  }
+
+  return options;
+}
 
 // Enable CORS and JSON parsing
 app.use(cors());
@@ -487,14 +505,11 @@ app.get('/api/yt/info', async (req, res) => {
   console.log(`[API/YT] Fetching metadata for URL: ${url}`);
   try {
     // Run yt-dlp to get flat playlist info or single video info
-    const info = await youtubedl(url, {
+    const info = await youtubedl(url, getYoutubeDlOptions({
       dumpSingleJson: true,
       flatPlaylist: true,
-      noWarnings: true,
-      noCheckCertificates: true,
-      preferFreeFormats: true,
-      youtubeSkipDashManifest: true
-    });
+      preferFreeFormats: true
+    }));
 
     if (!info) {
       throw new Error('Failed to retrieve video metadata');
@@ -563,9 +578,13 @@ app.get('/api/yt/info', async (req, res) => {
         error: 'Vercel Serverless Sandbox Limitations detected. AWS Lambda does not support python/yt-dlp binary extractions.'
       });
     }
+    let errMsg = `Failed to retrieve YouTube Music metadata: ${error.message}`;
+    if (error.message.includes('confirm you\'re not a bot') || error.message.includes('Sign in')) {
+      errMsg += '. YouTube is blocking this request with a bot challenge. To resolve this, export your YouTube cookies as a Netscape-format "cookies.txt" file and place it in the application\'s root directory.';
+    }
     return res.status(500).json({
       success: false,
-      error: `Failed to retrieve YouTube Music metadata: ${error.message}`
+      error: errMsg
     });
   }
 });
@@ -589,11 +608,9 @@ app.get('/api/yt/download', async (req, res) => {
     let artist = 'YouTube';
 
     try {
-      const meta = await youtubedl(url, {
-        dumpSingleJson: true,
-        noWarnings: true,
-        noCheckCertificates: true
-      });
+      const meta = await youtubedl(url, getYoutubeDlOptions({
+        dumpSingleJson: true
+      }));
       if (meta) {
         title = meta.title || 'Audio';
         artist = meta.uploader || meta.channel || 'YouTube';
@@ -608,12 +625,10 @@ app.get('/api/yt/download', async (req, res) => {
     // 2. Get direct CDN progressive stream URL for best quality audio
     // We prioritize M4A containers (AAC) because they are natively supported by browsers and devices,
     // otherwise fallback to any bestaudio track (Opus/WebM).
-    const streamUrl = await youtubedl(url, {
+    const streamUrl = await youtubedl(url, getYoutubeDlOptions({
       getUrl: true,
-      format: 'bestaudio[ext=m4a]/bestaudio',
-      noCheckCertificates: true,
-      noWarnings: true
-    });
+      format: 'bestaudio[ext=m4a]/bestaudio'
+    }));
 
     const targetStreamUrl = streamUrl.trim();
     if (!targetStreamUrl) {
@@ -658,7 +673,11 @@ app.get('/api/yt/download', async (req, res) => {
           error: 'Vercel Serverless Sandbox Limitations detected. AWS Lambda does not support python/yt-dlp binary extractions.'
         });
       }
-      res.status(500).send(`Failed to stream YouTube Music audio: ${error.message}`);
+      let errMsg = `Failed to stream YouTube Music audio: ${error.message}`;
+      if (error.message.includes('confirm you\'re not a bot') || error.message.includes('Sign in')) {
+        errMsg += '. YouTube is blocking this request with a bot challenge. To resolve this, export your YouTube cookies as a Netscape-format "cookies.txt" file and place it in the application\'s root directory.';
+      }
+      res.status(500).send(errMsg);
     }
   }
 });
