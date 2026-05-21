@@ -1,41 +1,48 @@
-# 🌌 InstaGlide
+# 🌌 InstaGlide Downloader Suite
 
-A premium, aerospace-grade Instagram Media Downloader and Creator Profile Explorer. Featuring a design inspired by **Google Gemini** and **Antigravity**'s futuristic precision, **InstaGlide** provides seamless high-performance extraction of single posts, videos, reels, and entire carousel slides, alongside profile exploration and intelligent batch downloading.
+A premium, aerospace-grade multi-platform media downloader. Combining **Google Gemini**'s clean, intelligent design language with **Antigravity**'s futuristic precision, **InstaGlide** provides seamless high-performance extraction and downloading of Instagram single media (videos, reels, images, carousel slidecars), public creator profiles, and a complete high-fidelity **YouTube Music Downloader & Playlist Suite** streaming best-quality audio (M4A/AAC).
 
 ---
 
 ## ✨ Features
 
+### 📸 Instagram Downloader Suite
 - **🎯 Dual-Mode Extraction**:
   - **Single Downloader**: Instantly extract details and source assets from Reels, single images, videos, or full Carousel/Sidecar posts using a swiper-based visual inspector.
-  - **Profile Explorer**: Input any public Instagram handle (e.g. `@antigravity_global`) to instantly parse their feed, visual grid, captions, statistics, and metadata.
-- **⚡ Sequential Batch Downloading**:
-  - **Multi-Select & Select All**: Easily toggle selection across creator posts.
-  - **Intelligent Queue System**: Queue multiple high-resolution downloads in a slide-out panel that downloads files sequentially with a built-in `1.5-second rate limiting delay` to prevent network bottlenecks or browser throttles.
-- **💫 Gemini × Antigravity Design System**:
+  - **Profile Explorer**: Input any public Instagram handle (e.g., `@antigravity_global`) to instantly parse their feed, visual grid, captions, statistics, and metadata.
+- **🛡️ Resilient Scraper Engine**:
+  - **GraphQL DocID Fetcher**: Employs native API calls (`doc_id=9510064595728286`) with a robust User-Agent rotator and custom request headers (`X-IG-App-ID`).
+  - **Resilient Fallbacks**: Auto-downgrades to page-scrape embeds if the native endpoints are throttled.
+  - **CORS Bypass Streaming Proxy**: Stream files directly through the Express backend so users can download actual media attachments directly rather than opening links in new tabs.
+
+### 🎵 YouTube Music Suite (New!)
+- **🎧 Best-Quality Audio extraction**: Automatically extracts and serves the highest quality progressive audio stream (typically 256kbps AAC in an `.m4a` container) directly.
+- **📋 Playlist Track Checklist**: Renders a rich list containing playlist cover, creator metadata, and track listings with exact duration indicators. Features interactive checkbox selections, Select All toggles, and live selection counters.
+- **⚡ Progressive Pipe Streaming**: Dynamically pipes binary streams (`res.pipe()`) directly from YouTube CDN servers to the browser. Fully on-the-fly and memory-safe—bypasses server disk writes entirely to fit within free cloud tier limitations.
+
+### ⚙️ Premium UX & Styling
+- **⚡ Sequential Batch Downloading**: Select multiple posts or track listings and download them sequentially inside our custom slide-out queue overlay. Features a built-in `1.5-second rate limiting delay` to bypass rate limits and guarantee browser downloads.
+- **💫 Gemini × Antigravity Theme**:
   - Deep space black (`#0a0a14`) with responsive blue/purple nebula backdrop glows.
   - Ultra-refined dark frosted glass cards (`rgba(66, 133, 244, 0.08)`) with metallic-sleek borders.
   - Vibrant **Gemini Spark** accent gradient buttons (`#4285F4` → `#8B5CF6` → `#EC4899`) and subtle micro-animations.
   - Elegant typography featuring `DM Sans` (headings), `Inter` (body), and `Noto Sans Mono` (technical details).
-- **🛡️ Robust Engine**:
-  - **GraphQL DocID Fetcher**: Employs native API calls (`doc_id=9510064595728286`) with a robust User-Agent rotator and custom request headers (`X-IG-App-ID`).
-  - **Resilient Fallbacks**: Auto-downgrades to page-scrape embeds if the native endpoints are throttled.
-  - **Built-in CORS Proxy**: Stream files directly through the Express backend so users can download actual media attachments directly rather than opening links in new tabs.
+- **📂 Activity History Log**: Local storage persistence caches recent downloads (including images, videos, and music tracks) for quick, one-click re-downloads with specialized media badges.
 
 ---
 
 ## 🛠️ Architecture & Tech Stack
 
-- **Frontend**: Vanilla HTML5, modern client-side JavaScript, custom CSS3, Google Fonts.
+- **Frontend**: Vanilla HTML5, modern client-side JavaScript, custom CSS3 variables, Lucide icons.
 - **Backend**: Node.js, Express, Axios, Cheerio, CORS.
-- **Rate-Limiting & Proxying**: Implements proxy streams (`/api/proxy`) to bypass CORS on Instagram CDN resources and safe downloads.
+- **Media Engine**: `youtube-dl-exec` (modern wrapper for the high-performance `yt-dlp` media extraction system).
 
 ---
 
 ## 🚀 Getting Started
 
 ### 📋 Prerequisites
-Ensure you have [Node.js](https://nodejs.org/) installed (v16.0.0 or higher recommended).
+Ensure you have [Node.js](https://nodejs.org/) installed (v18.0.0 or higher recommended).
 
 ### ⚙️ Installation
 1. Clone or navigate to the repository directory.
@@ -80,15 +87,15 @@ InstaGlide is fully optimized for **Vercel Serverless Functions** with an embedd
 ```
 instaglide/
 ├── public/                 # Client assets
-│   ├── index.html          # Main HTML structure
+│   ├── index.html          # Main HTML structure with triple-tab layouts
 │   ├── style.css           # Gemini × Antigravity custom stylesheet
-│   └── app.js              # State orchestration, queue, and swiper engine
-├── server.js               # Express application with GraphQL and stream proxy APIs
-├── package.json            # Node configurations and dependency trees
+│   └── app.js              # State orchestration, queue, and playlist engines
+├── server.js               # Express application with GraphQL, CORS proxy, and YT download APIs
+├── package.json            # Node configurations, scripts, and dependency trees
 └── .gitignore              # Ignores local debug files and node modules
 ```
 
 ---
 
 ## 🔐 Privacy & Security Disclaimer
-This application is strictly designed for personal backups, developer education, and creative research. All scraped media downloads are processed on-the-fly and streamed directly from public Instagram CDN servers without permanent storage on the host server. Always respect copyright guidelines and content ownership when downloading creator assets.
+This application is strictly designed for personal backups, developer education, and creative research. All scraped media downloads are processed on-the-fly and streamed directly from public CDN servers without permanent storage on the host server. Always respect copyright guidelines and content ownership when downloading creator assets.
