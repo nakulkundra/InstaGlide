@@ -6,7 +6,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import dotenv from 'dotenv';
-import youtubedl from 'youtube-dl-exec';
+import { create as createYoutubeDl } from 'youtube-dl-exec';
+import { execSync } from 'child_process';
 
 dotenv.config();
 
@@ -16,6 +17,68 @@ const PORT = process.env.PORT || 3000;
 // Resolve __dirname for ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+let youtubedl;
+
+// Dynamic, self-healing yt-dlp resolver and downloader
+async function bootstrapYtDlp() {
+  const binDir = path.resolve(__dirname, 'bin');
+  if (!fs.existsSync(binDir)) {
+    fs.mkdirSync(binDir, { recursive: true });
+  }
+
+  const platform = process.platform;
+  let binaryName = 'yt-dlp';
+  let downloadUrl = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp';
+
+  if (platform === 'win32') {
+    binaryName = 'yt-dlp.exe';
+    downloadUrl = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe';
+  } else if (platform === 'darwin') {
+    binaryName = 'yt-dlp_macos';
+    downloadUrl = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos';
+  }
+
+  const binaryPath = path.join(binDir, binaryName);
+
+  if (fs.existsSync(binaryPath)) {
+    console.log(`[API/YT] Found local yt-dlp binary at: ${binaryPath}`);
+    youtubedl = createYoutubeDl(binaryPath);
+    return;
+  }
+
+  // Check if system already has yt-dlp installed globally in PATH
+  try {
+    execSync('which yt-dlp');
+    console.log(`[API/YT] Found global 'yt-dlp' in system PATH. Initializing with it.`);
+    youtubedl = createYoutubeDl('yt-dlp');
+    return;
+  } catch (_) {
+    // If not in PATH, proceed to dynamic download
+  }
+
+  console.log(`[API/YT] yt-dlp binary not found. Dynamically downloading from: ${downloadUrl}`);
+  try {
+    const response = await axios({
+      method: 'GET',
+      url: downloadUrl,
+      responseType: 'arraybuffer',
+      headers: {
+        'User-Agent': 'Mozilla/5.0'
+      },
+      timeout: 30000 // 30s timeout for download
+    });
+
+    fs.writeFileSync(binaryPath, response.data);
+    fs.chmodSync(binaryPath, 0o755);
+    console.log(`[API/YT] Successfully downloaded and set executable permissions for: ${binaryPath}`);
+    youtubedl = createYoutubeDl(binaryPath);
+  } catch (err) {
+    console.error(`[API/YT] Dynamic yt-dlp download failed: ${err.message}`);
+    console.log(`[API/YT] Attempting standard fallback to default youtube-dl-exec...`);
+    youtubedl = createYoutubeDl();
+  }
+}
 
 // Helper to get yt-dlp options with auto-detected cookies.txt to bypass YouTube bot detection
 function getYoutubeDlOptions(extraParams = {}) {
@@ -729,12 +792,25 @@ app.get('/api/proxy', async (req, res) => {
   }
 });
 
-// Start the server
-app.listen(PORT, () => {
-  console.log(`=================================================`);
-  console.log(`🚀 Premium Instagram Downloader Server Active!`);
-  console.log(`🔌 Listening on: http://localhost:${PORT}`);
-  console.log(`=================================================`);
-});
+// Start the server with binary bootstrapping
+bootstrapYtDlp()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`=================================================`);
+      console.log(`🚀 Premium Instagram Downloader Server Active!`);
+      console.log(`🔌 Listening on: http://localhost:${PORT}`);
+      console.log(`=================================================`);
+    });
+  })
+  .catch((err) => {
+    console.error('[API/YT] Bootstrapping critical failure:', err.message);
+    // Start server anyway to prevent Render crash loops
+    app.listen(PORT, () => {
+      console.log(`=================================================`);
+      console.log(`⚠️ Premium Server Active with Startup Warnings!`);
+      console.log(`🔌 Listening on: http://localhost:${PORT}`);
+      console.log(`=================================================`);
+    });
+  });
 
 export default app;

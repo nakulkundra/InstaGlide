@@ -14,6 +14,7 @@
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "instagram-url-direct": "^2.0.7",
+    "puppeteer-core": "^25.0.4",
     "youtube-dl-exec": "^3.1.7"
   },
   "type": "module"

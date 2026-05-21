@@ -13,3 +13,5 @@ services:
         value: 10000
       - key: NODE_ENV
         value: production
+      - key: YOUTUBE_DL_SKIP_DOWNLOAD
+        value: "true"
