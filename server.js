@@ -5,6 +5,7 @@ import * as cheerio from 'cheerio';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import youtubedl from 'youtube-dl-exec';
 
 dotenv.config();
 
@@ -465,6 +466,184 @@ app.get('/api/profile/:username', async (req, res) => {
     success: false,
     error: `Unable to retrieve posts for username: "${username}". The profile might be private, deactivated, or our scraper is currently rate-limited.`
   });
+});
+
+/**
+ * ============================================================================
+ * YOUTUBE MUSIC / VIDEO SUITE ENDPOINTS
+ * ============================================================================
+ */
+
+/**
+ * Endpoint to fetch YouTube or YouTube Music single song/video or playlist metadata.
+ * Uses yt-dlp to extract titles, creators, cover thumbnails, durations, and playlist tracks.
+ */
+app.get('/api/yt/info', async (req, res) => {
+  const { url } = req.query;
+  if (!url) {
+    return res.status(400).json({ success: false, error: 'YouTube URL is required' });
+  }
+
+  console.log(`[API/YT] Fetching metadata for URL: ${url}`);
+  try {
+    // Run yt-dlp to get flat playlist info or single video info
+    const info = await youtubedl(url, {
+      dumpSingleJson: true,
+      flatPlaylist: true,
+      noWarnings: true,
+      noCheckCertificates: true,
+      preferFreeFormats: true,
+      youtubeSkipDashManifest: true
+    });
+
+    if (!info) {
+      throw new Error('Failed to retrieve video metadata');
+    }
+
+    // Determine if it is a playlist or a single video
+    const isPlaylist = info._type === 'playlist' || Array.isArray(info.entries);
+
+    if (isPlaylist) {
+      console.log(`[API/YT] Detected Playlist: "${info.title}". Found ${info.entries.length} tracks.`);
+      const entries = info.entries.map(entry => {
+        // Handle thumbnails safely
+        let thumbnail = '';
+        if (entry.thumbnails && entry.thumbnails.length > 0) {
+          thumbnail = entry.thumbnails[entry.thumbnails.length - 1].url;
+        } else {
+          thumbnail = `https://i.ytimg.com/vi/${entry.id}/hqdefault.jpg`;
+        }
+
+        return {
+          id: entry.id,
+          title: entry.title || 'Unknown Track',
+          artist: entry.uploader || entry.channel || info.title || 'Unknown Artist',
+          thumbnail: thumbnail,
+          duration: entry.duration || 0
+        };
+      });
+
+      return res.json({
+        success: true,
+        type: 'playlist',
+        id: info.id,
+        title: info.title || 'Unknown Playlist',
+        artist: info.uploader || info.channel || 'Unknown Creator',
+        thumbnail: info.thumbnails && info.thumbnails.length > 0 ? info.thumbnails[info.thumbnails.length - 1].url : entries[0]?.thumbnail || '',
+        entriesCount: entries.length,
+        entries: entries
+      });
+    } else {
+      console.log(`[API/YT] Detected Single Track: "${info.title}"`);
+      // Single video
+      let thumbnail = '';
+      if (info.thumbnails && info.thumbnails.length > 0) {
+        thumbnail = info.thumbnails[info.thumbnails.length - 1].url;
+      } else {
+        thumbnail = `https://i.ytimg.com/vi/${info.id}/hqdefault.jpg`;
+      }
+
+      return res.json({
+        success: true,
+        type: 'video',
+        id: info.id,
+        title: info.title || 'Unknown Track',
+        artist: info.uploader || info.channel || 'Unknown Artist',
+        thumbnail: thumbnail,
+        duration: info.duration || 0
+      });
+    }
+  } catch (error) {
+    console.error('[API/YT] Error fetching metadata:', error.message);
+    return res.status(500).json({
+      success: false,
+      error: `Failed to retrieve YouTube Music metadata: ${error.message}`
+    });
+  }
+});
+
+/**
+ * Endpoint to stream best quality YouTube audio (typically 128kbps/256kbps AAC in an M4A container)
+ * directly to the client browser on-the-fly, completely bypassing local disk writes.
+ */
+app.get('/api/yt/download', async (req, res) => {
+  const { id } = req.query;
+  if (!id) {
+    return res.status(400).send('YouTube Video ID is required');
+  }
+
+  const url = `https://www.youtube.com/watch?v=${id}`;
+  console.log(`[API/YT] Fetching high-quality audio stream for Video ID: ${id}`);
+
+  try {
+    // 1. Get metadata title and uploader to set correct filename
+    let title = 'Audio';
+    let artist = 'YouTube';
+
+    try {
+      const meta = await youtubedl(url, {
+        dumpSingleJson: true,
+        noWarnings: true,
+        noCheckCertificates: true
+      });
+      if (meta) {
+        title = meta.title || 'Audio';
+        artist = meta.uploader || meta.channel || 'YouTube';
+      }
+    } catch (e) {
+      console.warn('[API/YT] Could not retrieve metadata for filename creation, using defaults');
+    }
+
+    // Clean up filename (replace spaces, secure chars)
+    const cleanFilename = `${artist} - ${title}`.replace(/[\\/:*?"<>|]/g, '_').trim();
+
+    // 2. Get direct CDN progressive stream URL for best quality audio
+    // We prioritize M4A containers (AAC) because they are natively supported by browsers and devices,
+    // otherwise fallback to any bestaudio track (Opus/WebM).
+    const streamUrl = await youtubedl(url, {
+      getUrl: true,
+      format: 'bestaudio[ext=m4a]/bestaudio',
+      noCheckCertificates: true,
+      noWarnings: true
+    });
+
+    const targetStreamUrl = streamUrl.trim();
+    if (!targetStreamUrl) {
+      throw new Error('Direct stream URL could not be resolved');
+    }
+
+    console.log(`[API/YT] Resolved direct CDN stream URL. Streaming track...`);
+
+    // 3. Initiate progressive binary stream to client
+    const response = await axios({
+      method: 'get',
+      url: targetStreamUrl,
+      responseType: 'stream',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Referer': 'https://www.youtube.com/',
+        'Origin': 'https://www.youtube.com'
+      }
+    });
+
+    // Set high-fidelity download headers
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(cleanFilename)}.m4a"`);
+    res.setHeader('Content-Type', 'audio/x-m4a');
+    
+    // Support content-length if available
+    if (response.headers['content-length']) {
+      res.setHeader('Content-Length', response.headers['content-length']);
+    }
+
+    // Pipe response
+    response.data.pipe(res);
+
+  } catch (error) {
+    console.error('[API/YT] Download failed:', error.message);
+    if (!res.headersSent) {
+      res.status(500).send(`Failed to stream YouTube Music audio: ${error.message}`);
+    }
+  }
 });
 
 /**

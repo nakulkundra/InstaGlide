@@ -36,6 +36,35 @@ document.addEventListener("DOMContentLoaded", () => {
   const deselectAllBtn = document.getElementById("deselect-all-btn");
   const mediaGrid = document.getElementById("profile-media-grid");
 
+  // ==========================================
+  // YT Music Suite Elements
+  // ==========================================
+  const ytUrlInput = document.getElementById("yt-url");
+  const ytClearBtn = document.getElementById("yt-clear");
+  const ytSubmitBtn = document.getElementById("yt-submit");
+  const ytLoader = document.getElementById("yt-loader");
+  const ytResult = document.getElementById("yt-result");
+
+  const ytSinglePreview = document.getElementById("yt-single-preview");
+  const ytSingleCover = document.getElementById("yt-single-cover");
+  const ytSingleTitle = document.getElementById("yt-single-title");
+  const ytSingleArtist = document.getElementById("yt-single-artist");
+  const ytSingleDuration = document.getElementById("yt-single-duration");
+  const ytSingleDownloadBtn = document.getElementById("yt-single-download-btn");
+
+  const ytPlaylistContainer = document.getElementById("yt-playlist-container");
+  const ytPlaylistCover = document.getElementById("yt-playlist-cover");
+  const ytPlaylistName = document.getElementById("yt-playlist-name");
+  const ytPlaylistCreator = document.getElementById("yt-playlist-creator");
+  const ytPlaylistTrackCount = document.getElementById("yt-playlist-track-count");
+
+  const selectAllYtCheckbox = document.getElementById("select-all-yt-tracks");
+  const deselectAllYtBtn = document.getElementById("deselect-all-yt-btn");
+  const ytSelectionStatus = document.getElementById("yt-selection-status");
+  const ytDownloadAllTrigger = document.getElementById("yt-download-all-trigger");
+  const ytBatchDownloadTrigger = document.getElementById("yt-batch-download-trigger");
+  const ytPlaylistTrackList = document.getElementById("yt-playlist-track-list");
+
   // Global Error & History Elements
   const globalError = document.getElementById("global-error");
   const errorMessage = document.getElementById("error-message");
@@ -54,6 +83,12 @@ document.addEventListener("DOMContentLoaded", () => {
   let profilePosts = []; // Currently explored profile posts
   let selectedPosts = new Set(); // Set of shortcodes selected
   let isDownloadingBatch = false;
+
+  // YouTube Music State
+  let ytTracks = []; // Currently explored playlist tracks
+  let selectedYtTracks = new Set(); // Set of video IDs selected
+  let isDownloadingYtBatch = false;
+  let currentYtData = null; // Stored metadata for single track/playlist
 
   // Render Activity History on Boot
   renderHistory();
@@ -83,6 +118,7 @@ document.addEventListener("DOMContentLoaded", () => {
      ========================================== */
   setupInputField(singleUrlInput, singleClearBtn);
   setupInputField(profileHandleInput, profileClearBtn);
+  setupInputField(ytUrlInput, ytClearBtn);
 
   function setupInputField(input, clearBtn) {
     input.addEventListener("input", () => {
@@ -752,7 +788,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Setup re-download click trigger
       row.querySelector(".history-redownload-btn").addEventListener("click", () => {
-        forceBrowserDownload(item.downloadUrl, item.shortcode, item.type === "video");
+        if (item.type === "audio") {
+          forceBrowserYtDownload(item.shortcode);
+        } else {
+          forceBrowserDownload(item.downloadUrl, item.shortcode, item.type === "video");
+        }
       });
 
       historyList.appendChild(row);
@@ -760,5 +800,302 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Initialize Lucide Icons for dynamic content
     lucide.createIcons();
+  }
+
+  /* ==========================================
+     8. YouTube Music Downloader Suite
+     ========================================== */
+  ytSubmitBtn.addEventListener("click", handleYtSubmit);
+  ytUrlInput.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") handleYtSubmit();
+  });
+
+  async function handleYtSubmit() {
+    const rawUrl = ytUrlInput.value.trim();
+    hideError();
+    ytResult.style.display = "none";
+    ytSinglePreview.style.display = "none";
+    ytPlaylistContainer.style.display = "none";
+
+    if (!rawUrl) {
+      showError("Please enter a valid YouTube Music song or playlist URL.");
+      return;
+    }
+
+    if (!rawUrl.includes("youtube.com") && !rawUrl.includes("youtu.be")) {
+      showError("Invalid YouTube URL. Please enter a valid YouTube or YouTube Music link.");
+      return;
+    }
+
+    // Enter loading state
+    ytLoader.style.display = "flex";
+    ytSubmitBtn.disabled = true;
+
+    try {
+      const response = await fetch(`/api/yt/info?url=${encodeURIComponent(rawUrl)}`);
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || "Failed to extract YouTube content.");
+      }
+
+      currentYtData = data;
+
+      if (data.type === "playlist") {
+        // Populate Playlist View
+        ytPlaylistCover.src = data.thumbnail || "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=300&auto=format&fit=crop";
+        ytPlaylistName.textContent = data.title;
+        ytPlaylistCreator.textContent = data.artist;
+        ytPlaylistTrackCount.textContent = data.entriesCount;
+
+        ytTracks = data.entries;
+        selectedYtTracks.clear();
+
+        // Clear and render track checklist
+        ytPlaylistTrackList.innerHTML = "";
+        
+        if (ytTracks.length === 0) {
+          ytPlaylistTrackList.innerHTML = `
+            <div class="history-empty-state" style="grid-column: 1 / -1;">
+              <i data-lucide="music-4"></i>
+              <p>This playlist does not contain any tracks.</p>
+            </div>
+          `;
+        } else {
+          ytTracks.forEach((track, idx) => {
+            const item = document.createElement("div");
+            item.classList.add("yt-track-item");
+            item.setAttribute("data-video-id", track.id);
+
+            item.innerHTML = `
+              <div class="card-checkbox"><i data-lucide="check"></i></div>
+              <div class="yt-track-index">${idx + 1}</div>
+              <img src="${track.thumbnail}" class="yt-track-cover" alt="Track Cover" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=80&auto=format&fit=crop'">
+              <div class="yt-track-info">
+                <div class="yt-track-title">${track.title}</div>
+                <div class="yt-track-artist">${track.artist}</div>
+              </div>
+              <div class="yt-track-duration">${formatDuration(track.duration)}</div>
+            `;
+
+            // Toggle select on click
+            item.addEventListener("click", () => {
+              toggleYtTrackSelection(track.id, item);
+            });
+
+            ytPlaylistTrackList.appendChild(item);
+          });
+        }
+
+        updateYtSelectionUI();
+        ytPlaylistContainer.style.display = "flex";
+      } else {
+        // Populate Single Song View
+        ytSingleCover.src = data.thumbnail || "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=300&auto=format&fit=crop";
+        ytSingleTitle.textContent = data.title;
+        ytSingleArtist.textContent = data.artist;
+        ytSingleDuration.textContent = formatDuration(data.duration);
+
+        // Setup single download button trigger
+        ytSingleDownloadBtn.onclick = () => {
+          forceBrowserYtDownload(data.id);
+          saveToHistory({
+            shortcode: data.id,
+            creator: data.artist || "YouTube Music",
+            thumbnail: data.thumbnail,
+            type: "audio",
+            caption: data.title,
+            downloadUrl: `/api/yt/download?id=${data.id}`
+          });
+        };
+
+        ytSinglePreview.style.display = "flex";
+      }
+
+      ytResult.style.display = "flex";
+      lucide.createIcons();
+
+    } catch (err) {
+      console.error(err);
+      showError(err.message || "An error occurred while connecting to our YouTube extractor.");
+    } finally {
+      ytLoader.style.display = "none";
+      ytSubmitBtn.disabled = false;
+    }
+  }
+
+  function toggleYtTrackSelection(id, element) {
+    if (selectedYtTracks.has(id)) {
+      selectedYtTracks.delete(id);
+      element.classList.remove("selected");
+    } else {
+      selectedYtTracks.add(id);
+      element.classList.add("selected");
+    }
+    updateYtSelectionUI();
+  }
+
+  function updateYtSelectionUI() {
+    const count = selectedYtTracks.size;
+    ytSelectionStatus.textContent = `${count} track${count !== 1 ? 's' : ''} selected`;
+
+    if (count > 0) {
+      ytBatchDownloadTrigger.classList.remove("disabled");
+      deselectAllYtBtn.style.display = "flex";
+    } else {
+      ytBatchDownloadTrigger.classList.add("disabled");
+      deselectAllYtBtn.style.display = "none";
+    }
+
+    if (ytTracks.length > 0 && count === ytTracks.length) {
+      selectAllYtCheckbox.checked = true;
+    } else {
+      selectAllYtCheckbox.checked = false;
+    }
+  }
+
+  selectAllYtCheckbox.addEventListener("change", () => {
+    const trackElements = document.querySelectorAll(".yt-track-item");
+    if (selectAllYtCheckbox.checked) {
+      ytTracks.forEach(track => selectedYtTracks.add(track.id));
+      trackElements.forEach(el => el.classList.add("selected"));
+    } else {
+      selectedYtTracks.clear();
+      trackElements.forEach(el => el.classList.remove("selected"));
+    }
+    updateYtSelectionUI();
+  });
+
+  deselectAllYtBtn.addEventListener("click", () => {
+    selectedYtTracks.clear();
+    const trackElements = document.querySelectorAll(".yt-track-item");
+    trackElements.forEach(el => el.classList.remove("selected"));
+    updateYtSelectionUI();
+  });
+
+  // Batch download trigger click bindings
+  ytBatchDownloadTrigger.addEventListener("click", startYtBatchDownloadingQueue);
+
+  // Download All click bindings
+  ytDownloadAllTrigger.addEventListener("click", () => {
+    if (ytTracks.length === 0 || isDownloadingYtBatch) return;
+    const trackElements = document.querySelectorAll(".yt-track-item");
+    ytTracks.forEach(track => selectedYtTracks.add(track.id));
+    trackElements.forEach(el => el.classList.add("selected"));
+    selectAllYtCheckbox.checked = true;
+    updateYtSelectionUI();
+    startYtBatchDownloadingQueue();
+  });
+
+  async function startYtBatchDownloadingQueue() {
+    if (selectedYtTracks.size === 0 || isDownloadingYtBatch) return;
+
+    isDownloadingYtBatch = true;
+    ytBatchDownloadTrigger.classList.add("disabled");
+    selectAllYtCheckbox.disabled = true;
+
+    // Open sliding progress panel overlay
+    queueOverlay.style.display = "block";
+    queueProgressBar.style.width = "0%";
+    queuePercentage.textContent = "0%";
+
+    const selectedIds = Array.from(selectedYtTracks);
+    const totalItems = selectedIds.length;
+    let successCount = 0;
+
+    for (let index = 0; index < totalItems; index++) {
+      const id = selectedIds[index];
+      const track = ytTracks.find(t => t.id === id);
+
+      if (!track) continue;
+
+      const element = document.querySelector(`.yt-track-item[data-video-id="${id}"]`);
+      if (element) {
+        element.classList.add("downloading");
+      }
+
+      // Update progress UI
+      const percent = Math.round((index / totalItems) * 100);
+      queueStatusText.textContent = `Downloading track ${index + 1} of ${totalItems}...`;
+      queuePercentage.textContent = `${percent}%`;
+      queueProgressBar.style.width = `${percent}%`;
+      queueFileLabel.textContent = `Preparing stream: ${track.title}...`;
+
+      try {
+        queueFileLabel.textContent = `Streaming file: [Artist] - ${track.title}.m4a`;
+        
+        // Trigger physical download
+        forceBrowserYtDownload(id);
+        successCount++;
+
+        if (element) {
+          element.classList.remove("downloading");
+          element.classList.add("downloaded");
+        }
+
+        // Save to history
+        saveToHistory({
+          shortcode: id,
+          creator: track.artist || "YouTube Music",
+          thumbnail: track.thumbnail,
+          type: "audio",
+          caption: track.title,
+          downloadUrl: `/api/yt/download?id=${id}`
+        });
+
+      } catch (err) {
+        console.error(`Failed to download YouTube track: ${track.title}`, err);
+        if (element) {
+          element.classList.remove("downloading");
+        }
+      }
+
+      // Rate-limiting pause (1500ms) to avoid server load & ensure browser download queue fires
+      await sleep(1500);
+    }
+
+    // Complete queue progress
+    queueStatusText.textContent = `Batch complete! Successfully saved ${successCount} of ${totalItems} tracks.`;
+    queuePercentage.textContent = "100%";
+    queueProgressBar.style.width = "100%";
+    queueFileLabel.textContent = "All tracks downloaded.";
+
+    // Re-enable and reset select UI
+    isDownloadingYtBatch = false;
+    selectAllYtCheckbox.disabled = false;
+    selectAllYtCheckbox.checked = false;
+    selectedYtTracks.clear();
+    updateYtSelectionUI();
+
+    // Deselect and clear statuses
+    setTimeout(() => {
+      const trackElements = document.querySelectorAll(".yt-track-item");
+      trackElements.forEach(el => {
+        el.classList.remove("selected");
+        el.classList.remove("downloaded");
+      });
+    }, 2000);
+
+    // Automatically hide queue overlay after 4 seconds
+    setTimeout(() => {
+      if (!isDownloadingYtBatch && !isDownloadingBatch) {
+        queueOverlay.style.display = "none";
+      }
+    }, 4000);
+  }
+
+  function forceBrowserYtDownload(id) {
+    const downloadLink = document.createElement("a");
+    downloadLink.href = `/api/yt/download?id=${encodeURIComponent(id)}`;
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+  }
+
+  function formatDuration(secs) {
+    if (!secs && secs !== 0) return "0:00";
+    const m = Math.floor(secs / 60);
+    const s = Math.floor(secs % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
   }
 });

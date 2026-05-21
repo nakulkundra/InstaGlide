@@ -42,6 +42,10 @@
         <i data-lucide="users" class="tab-icon"></i>
         Profile Explorer
       </button>
+      <button class="tab-btn" data-tab="yt">
+        <i data-lucide="music" class="tab-icon"></i>
+        YT Music Suite
+      </button>
     </div>
 
     <!-- MAIN INTERACTIVE CONTAINER -->
@@ -174,6 +178,103 @@
           <!-- Responsive Media Grid -->
           <div class="media-grid" id="profile-media-grid">
             <!-- Grid items injected dynamically via JS -->
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ================= YT MUSIC DOWNLOADER TAB ================= -->
+      <section id="tab-yt" class="tab-content" style="display: none;">
+        <div class="input-group">
+          <label for="yt-url">Enter YouTube Music Song or Playlist URL</label>
+          <div class="input-wrapper">
+            <i data-lucide="music" class="input-icon"></i>
+            <input type="text" id="yt-url" placeholder="https://music.youtube.com/watch?v=... or playlist?list=..." autocomplete="off">
+            <button class="clear-btn" id="yt-clear" style="display: none;">
+              <i data-lucide="x"></i>
+            </button>
+          </div>
+          <button class="primary-btn" id="yt-submit">
+            <span>Inspect Content</span>
+            <i data-lucide="search"></i>
+          </button>
+        </div>
+
+        <!-- Dynamic Loader for YT -->
+        <div class="loader-container" id="yt-loader" style="display: none;">
+          <div class="spinner"></div>
+          <p class="loader-text">Querying YouTube Music servers...</p>
+        </div>
+
+        <!-- YT Results Panel -->
+        <div class="yt-result-container" id="yt-result" style="display: none;">
+          
+          <!-- Single Song Result Preview -->
+          <div class="yt-single-preview glass-card" id="yt-single-preview" style="display: none;">
+            <div class="yt-single-card-body">
+              <img id="yt-single-cover" src="" alt="Album Art" class="yt-song-cover">
+              <div class="yt-song-details">
+                <h3 id="yt-single-title">Song Title</h3>
+                <p id="yt-single-artist" class="yt-song-artist">Artist Name</p>
+                <div class="yt-song-meta">
+                  <span class="meta-badge"><i data-lucide="clock"></i> <span id="yt-single-duration">0:00</span></span>
+                  <span class="meta-badge success"><i data-lucide="shield-check"></i> Best M4A Audio</span>
+                </div>
+              </div>
+            </div>
+            <button class="primary-btn download-single-btn" id="yt-single-download-btn">
+              <i data-lucide="download"></i>
+              <span>Download Best Quality Audio</span>
+            </button>
+          </div>
+
+          <!-- Playlist Results Container -->
+          <div class="yt-playlist-container" id="yt-playlist-container" style="display: none;">
+            
+            <!-- Playlist Meta Header -->
+            <div class="profile-meta-header glass-card">
+              <img id="yt-playlist-cover" src="" alt="Playlist Cover" class="profile-header-avatar">
+              <div class="profile-header-text">
+                <div class="profile-title-row">
+                  <h2 id="yt-playlist-name">Playlist Name</h2>
+                  <span class="handle-badge" id="yt-playlist-badge">Playlist</span>
+                </div>
+                <p class="profile-header-bio">Created by <span id="yt-playlist-creator" style="font-weight: 500; color: #fff;">Creator</span> &bull; <span id="yt-playlist-track-count">0</span> tracks found</p>
+              </div>
+            </div>
+
+            <!-- Multi-Select Action Bar -->
+            <div class="media-action-bar">
+              <div class="selector-controls">
+                <label class="custom-checkbox-container">
+                  <input type="checkbox" id="select-all-yt-tracks">
+                  <span class="checkmark"></span>
+                  <span class="checkbox-label">Select All</span>
+                </label>
+                <button class="deselect-btn" id="deselect-all-yt-btn" style="display: none;">
+                  <i data-lucide="x-circle"></i>
+                  <span>Deselect All</span>
+                </label>
+                <span class="selection-count" id="yt-selection-status">0 tracks selected</span>
+              </div>
+              
+              <div class="action-buttons-group">
+                <button class="download-all-btn" id="yt-download-all-trigger">
+                  <i data-lucide="download-cloud"></i>
+                  <span>Download All</span>
+                </button>
+                <button class="batch-download-btn disabled" id="yt-batch-download-trigger">
+                  <i data-lucide="download"></i>
+                  <span>Download Selected</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Responsive Track checklist list -->
+            <div class="yt-track-list" id="yt-playlist-track-list">
+              <!-- Playlist track items injected dynamically via JS -->
+            </div>
+
           </div>
 
         </div>

@@ -1472,3 +1472,229 @@ body {
   transform: translateY(-2px);
   box-shadow: 0 6px 22px rgba(66, 133, 244, 0.35) !important;
 }
+
+/* ==========================================================================
+   15. YT MUSIC DOWNLOADER SUITE
+   ========================================================================== */
+#tab-yt {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.yt-result-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+}
+
+.yt-single-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
+  border-radius: 16px;
+  transition: var(--transition-smooth);
+}
+
+.yt-single-card-body {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.yt-song-cover {
+  width: 120px;
+  height: 120px;
+  border-radius: 12px;
+  object-fit: cover;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.yt-song-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.yt-song-details h3 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-primary);
+  letter-spacing: -0.3px;
+  line-height: 1.2;
+}
+
+.yt-song-artist {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.yt-song-meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.meta-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.meta-badge i {
+  width: 14px;
+  height: 14px;
+}
+
+.meta-badge.success {
+  background: rgba(52, 168, 83, 0.1);
+  border-color: rgba(52, 168, 83, 0.2);
+  color: #81c995;
+}
+
+.download-single-btn {
+  width: 100%;
+  justify-content: center;
+  height: 50px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+/* Playlist container and list */
+.yt-playlist-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+.yt-track-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.yt-track-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(66, 133, 244, 0.05);
+  background: var(--glass-card);
+}
+
+.yt-track-item:hover {
+  background: rgba(66, 133, 244, 0.05);
+  border-color: rgba(66, 133, 244, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.yt-track-item.selected {
+  background: rgba(66, 133, 244, 0.08);
+  border-color: rgba(66, 133, 244, 0.35);
+  box-shadow: 0 0 15px rgba(66, 133, 244, 0.15);
+}
+
+.yt-track-item.downloading {
+  background: rgba(139, 92, 246, 0.08) !important;
+  border-color: rgba(139, 92, 246, 0.35) !important;
+}
+
+.yt-track-item.downloaded {
+  background: rgba(52, 168, 83, 0.08) !important;
+  border-color: rgba(52, 168, 83, 0.35) !important;
+}
+
+.yt-track-item .card-checkbox {
+  position: static;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: transparent;
+  transition: all 0.2s ease;
+  background: transparent;
+}
+
+.yt-track-item.selected .card-checkbox {
+  background: var(--accent-blue);
+  border-color: var(--accent-blue);
+  color: #fff;
+}
+
+.yt-track-item .card-checkbox i {
+  width: 12px;
+  height: 12px;
+  stroke-width: 3;
+}
+
+.yt-track-index {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  width: 24px;
+  text-align: center;
+}
+
+.yt-track-cover {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.yt-track-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.yt-track-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.yt-track-artist {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.yt-track-duration {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
